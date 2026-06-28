@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Editor AI - Gán Phụ Đề & Giọng Nói</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="header-container">
+        <div class="logo-area">
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1>Video Editor AI</h1>
+            <p>Tự động tạo phụ đề & chuyển đổi giọng nói (TTS) chất lượng cao</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- START SCREEN: Projects list & Upload -->
+    <div id="start-screen" class="container-screen">
+      <div class="start-card card">
+        <div class="start-header">
+          <h2>Bắt đầu dự án mới</h2>
+          <p>Tải video lên để bắt đầu biên tập phụ đề và giọng nói AI</p>
+        </div>
+        
+        <!-- Upload drop zone -->
+        <div id="drop-zone">
+          <input type="file" id="file-input" accept="video/*">
+          <div class="drop-zone-content">
+            <div class="upload-cloud-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <p class="drop-text">Kéo thả video hoặc click để chọn</p>
+            <p class="drop-subtext">Khuyên dùng định dạng MP4 (H.264/AAC)</p>
+          </div>
+        </div>
+        
+        <!-- Upload Progress Indicator -->
+        <div id="upload-progress-container" class="progress-container-wrapper" style="display:none">
+          <div class="progress-details">
+            <span id="upload-status-text">Đang tải lên...</span>
+            <span id="upload-percentage">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="upload-progress-fill" class="progress-bar-fill animated-stripes"></div>
+          </div>
+        </div>
+
+        <!-- Video list for existing projects -->
+        <div id="video-list-section" class="video-list-section" style="display:none">
+          <h3>Các dự án đã tải lên gần đây</h3>
+          <div class="select-project-group">
+            <div class="select-wrapper">
+              <select id="video-select" onchange="if(this.value) { selectVideo(this.value); }"></select>
+            </div>
+            <button id="btn-open-project" class="btn-open-project" onclick="const val = document.getElementById('video-select').value; if(val) { selectVideo(val); } else { alert('Vui lòng chọn một dự án.'); }">Mở dự án</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKSPACE SCREEN: Video Editor Split Layout -->
+    <div id="workspace-screen" class="container-screen" style="display:none">
+      <div class="workspace-toolbar">
+        <button id="btn-back-to-start" class="btn-back">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          ← Tải/Chọn video khác
+        </button>
+        <div class="active-project-title">
+          <span class="dot-active"></span> Đang biên tập: <strong id="active-video-name">...</strong>
+        </div>
+      </div>
+
+      <div id="main-container">
+        <!-- LEFT: Video + Render -->
+        <div id="left-panel">
+          <!-- Video Player Card -->
+          <div id="player-area" class="card">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3>Trình phát video</h3>
+            </div>
+            <div class="video-wrapper">
+              <video id="video-player" controls></video>
+              <div id="video-subtitle-overlay" class="video-subtitle-overlay" style="display: none;"></div>
+            </div>
+
+            <!-- Visual Timeline Bar -->
+            <div class="timeline-container">
+              <div class="timeline-labels">
+                <span>0.00s</span>
+                <span id="timeline-duration-label">0.00s</span>
+              </div>
+              <div id="visual-timeline" class="visual-timeline">
+                <div id="timeline-playhead" class="timeline-playhead"></div>
+                <div id="timeline-subs-container" class="timeline-subs-container"></div>
+              </div>
+              <div class="timeline-hint">💡 Kéo thả văn bản (.txt hoặc bôi đen kéo) vào màn hình video hoặc thanh Timeline trên để chèn nhanh</div>
+            </div>
+
+            <div id="timeline-controls">
+              <button id="btn-set-start" class="btn-time">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Đặt điểm đầu
+              </button>
+              <button id="btn-set-end" class="btn-time">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Đặt điểm cuối
+              </button>
+              <span id="time-display">0.00s / 0.00s</span>
+            </div>
+          </div>
+
+          <!-- Render Controls Card -->
+          <div id="render-area" class="card">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <h3>Cấu hình xuất bản</h3>
+            </div>
+            <div class="render-settings-grid">
+              <div class="setting-item">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="voice-toggle" checked>
+                  <span class="checkmark"></span>
+                  Thêm giọng đọc AI (TTS)
+                </label>
+              </div>
+              <div class="setting-item">
+                <label for="voice-lang">Ngôn ngữ giọng đọc:</label>
+                <div class="select-wrapper">
+                  <select id="voice-lang">
+                    <option value="vi">Tiếng Việt (Mặc định)</option>
+                    <option value="en">English (Mỹ)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="btn-actions-group">
+              <button id="btn-render" class="btn-action-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Render Video Hoàn Chỉnh
+              </button>
+              <button id="btn-render-audio" class="btn-action-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+                Chỉ xuất Audio (MP3)
+              </button>
+            </div>
+            
+            <!-- Render Progress Indicator -->
+            <div id="progress-bar" class="progress-container-wrapper" style="display:none">
+              <div class="progress-details">
+                <span id="progress-text">Đang render...</span>
+              </div>
+              <div class="progress-bar-track">
+                <div id="progress-fill" class="progress-bar-fill progress-fill-blue animated-stripes"></div>
+              </div>
+            </div>
+            <div id="download-area" class="download-section" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Subtitle Editor -->
+        <div id="right-panel">
+          <div class="card subtitle-card">
+            <div class="card-header subtitle-header">
+              <div class="card-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+              </div>
+              <h3>Biên tập phụ đề</h3>
+            </div>
+            
+            <div id="subtitle-toolbar">
+              <button id="btn-add-sub" class="btn-toolbar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Thêm phụ đề
+              </button>
+              <button id="btn-import-srt" class="btn-toolbar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Nhập SRT
+              </button>
+              <input type="file" id="srt-input" accept=".srt" style="display:none">
+              <button id="btn-export-srt" class="btn-toolbar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Xuất SRT
+              </button>
+            </div>
+            
+            <div id="subtitle-list" class="styled-scroll"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=1.0.2"></script>
+</body>
+</html>
