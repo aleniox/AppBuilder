@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.0.1">
 </head>
 <body>
   <div id="app">
@@ -28,12 +28,13 @@
       </div>
     </header>
 
-    <!-- START SCREEN: Projects list & Upload -->
-    <div id="start-screen" class="container-screen">
-      <div class="start-card card">
-        <div class="start-header">
-          <h2>Bắt đầu dự án mới</h2>
-          <p>Tải video lên để bắt đầu biên tập phụ đề và giọng nói AI</p>
+    <!-- START SCREEN: Dashboard Layout -->
+    <div id="start-screen" class="container-screen dashboard-layout">
+      <!-- Left: Upload Section -->
+      <div class="dashboard-card card upload-section-card">
+        <div class="card-header-clean">
+          <h2>Tải video mới lên</h2>
+          <p>Tải video của bạn để bắt đầu tạo phụ đề và thuyết minh giọng nói AI</p>
         </div>
         
         <!-- Upload drop zone -->
@@ -60,37 +61,46 @@
             <div id="upload-progress-fill" class="progress-bar-fill animated-stripes"></div>
           </div>
         </div>
+      </div>
 
-        <!-- Video list for existing projects -->
-        <div id="video-list-section" class="video-list-section" style="display:none">
-          <h3>Các dự án đã tải lên gần đây</h3>
-          <div class="select-project-group">
-            <div class="select-wrapper">
-              <select id="video-select" onchange="if(this.value) { selectVideo(this.value); }"></select>
-            </div>
-            <button id="btn-open-project" class="btn-open-project" onclick="const val = document.getElementById('video-select').value; if(val) { selectVideo(val); } else { alert('Vui lòng chọn một dự án.'); }">Mở dự án</button>
-          </div>
+      <!-- Right: Recent Projects Section -->
+      <div class="dashboard-card card recent-projects-card">
+        <div class="card-header-clean">
+          <h2>Dự án gần đây</h2>
+          <p>Danh sách các video đã tải lên gần đây của bạn</p>
+        </div>
+        
+        <div id="recent-projects-container" class="recent-projects-list styled-scroll">
+          <div class="projects-loading">Đang tải danh sách dự án...</div>
         </div>
       </div>
     </div>
 
     <!-- WORKSPACE SCREEN: Video Editor Split Layout -->
-    <div id="workspace-screen" class="container-screen" style="display:none">
+    <div id="workspace-screen" class="container-screen workspace-layout" style="display:none">
       <div class="workspace-toolbar">
-        <button id="btn-back-to-start" class="btn-back">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          ← Tải/Chọn video khác
-        </button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button id="btn-back-to-start" class="btn-back">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            ← Tải/Chọn video khác
+          </button>
+          <button id="btn-insert-video" class="btn-back" style="border-color: rgba(139, 92, 246, 0.4); color: #c084fc;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg" style="color: #c084fc;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            🧩 Ghép thêm clip video
+          </button>
+        </div>
         <div class="active-project-title">
           <span class="dot-active"></span> Đang biên tập: <strong id="active-video-name">...</strong>
         </div>
       </div>
 
-      <div id="main-container">
+      <div class="workspace-content">
         <!-- LEFT: Video + Render -->
-        <div id="left-panel">
+        <div class="workspace-left">
           <!-- Video Player Card -->
           <div id="player-area" class="card">
             <div class="card-header">
@@ -115,6 +125,7 @@
               </div>
               <div id="visual-timeline" class="visual-timeline">
                 <div id="timeline-playhead" class="timeline-playhead"></div>
+                <div id="timeline-clips-container" class="timeline-clips-container"></div>
                 <div id="timeline-subs-container" class="timeline-subs-container"></div>
               </div>
               <div class="timeline-hint">💡 Kéo thả văn bản (.txt hoặc bôi đen kéo) vào màn hình video hoặc thanh Timeline trên để chèn nhanh</div>
@@ -194,7 +205,7 @@
         </div>
 
         <!-- RIGHT: Subtitle Editor -->
-        <div id="right-panel">
+        <div class="workspace-right">
           <div class="card subtitle-card">
             <div class="card-header subtitle-header">
               <div class="card-icon">
@@ -234,6 +245,81 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.2"></script>
+  <!-- Insert Video Modal Overlay -->
+  <div id="insert-clip-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card card">
+      <div class="card-header-clean">
+        <h2>Ghép thêm clip video</h2>
+        <p>Chèn một đoạn clip video khác vào dự án hiện tại</p>
+      </div>
+      
+      <div class="modal-body">
+        <div class="input-group-clean">
+          <label for="insert-file-input">Chọn file video để chèn:</label>
+          <input type="file" id="insert-file-input" accept="video/*" class="styled-file-input">
+        </div>
+        
+        <div class="input-group-clean" style="margin-top: 16px;">
+          <label for="insert-time-input">Thời điểm chèn (giây):</label>
+          <input type="number" id="insert-time-input" step="0.1" min="0" value="0.00" class="styled-number-input">
+          <span class="input-hint">💡 Đã tự động lấy vị trí phát hiện tại của video player</span>
+        </div>
+
+        <!-- Loading state inside modal -->
+        <div id="merge-loading-indicator" class="progress-container-wrapper" style="display:none; margin-top: 16px;">
+          <div class="progress-details" style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span id="merge-status-text">Đang chuẩn bị tải lên...</span>
+            <span id="merge-percentage" style="font-weight: bold; color: #a78bfa;">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="merge-progress-fill" class="progress-bar-fill animated-stripes progress-fill-blue" style="width: 0%;"></div>
+          </div>
+          <p class="loading-hint-text">⚠️ Quá trình này có thể mất một vài phút để đồng bộ hình ảnh và dịch chuyển phụ đề của bạn.</p>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button id="btn-cancel-insert" class="btn-action-secondary">Hủy bỏ</button>
+        <button id="btn-submit-insert" class="btn-action-primary">Ghép video</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Clip Modal Overlay -->
+  <div id="manage-clip-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card card">
+      <div class="card-header-clean">
+        <h2>Quản lý Clip đã ghép</h2>
+        <p id="manage-clip-info" class="modal-subtitle" style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Thông tin clip...</p>
+      </div>
+      
+      <div class="modal-body" style="margin-top: 16px;">
+        <div class="input-group-clean">
+          <label for="move-time-input">Di chuyển đến thời điểm (giây):</label>
+          <input type="number" id="move-time-input" step="0.1" min="0" value="0.00" class="styled-number-input">
+        </div>
+        
+        <!-- Loading state inside modal -->
+        <div id="manage-clip-loading" class="progress-container-wrapper" style="display:none; margin-top: 16px;">
+          <div class="progress-details" style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span id="manage-clip-status-text">Đang xử lý...</span>
+            <span style="font-weight: bold; color: #a78bfa;">Chạy nền...</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill animated-stripes progress-fill-blue" style="width: 100%;"></div>
+          </div>
+          <p class="loading-hint-text" style="color: #94a3b8; font-size: 11px; margin-top: 6px;">⚠️ Tác vụ này cắt ghép trực tiếp bằng FFmpeg stream copy nên sẽ diễn ra rất nhanh.</p>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+        <button id="btn-delete-clip" class="btn-action-danger" style="margin-right: auto; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: all 0.2s ease;">🗑️ Xóa clip</button>
+        <button id="btn-cancel-manage" class="btn-action-secondary">Hủy bỏ</button>
+        <button id="btn-submit-move" class="btn-action-primary">Di chuyển</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app_v7.js"></script>
 </body>
 </html>

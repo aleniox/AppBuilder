@@ -846,90 +846,237 @@ select:focus {
 
 /* Screen Containers Layout */
 .container-screen {
-  padding: 30px 40px;
+  padding: 24px 40px;
   max-width: 1600px;
   margin: 0 auto;
-  animation: fade-in 0.3s ease;
+  animation: fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Start screen styling */
-#start-screen {
+/* Dashboard Layout */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 32px;
+  align-items: flex-start;
+  min-height: calc(100vh - 140px);
+}
+
+.dashboard-card {
+  height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 120px);
+  flex-direction: column;
 }
 
-.start-card {
-  width: 100%;
-  max-width: 680px;
-  background: rgba(18, 18, 29, 0.6);
-  border: 1px solid var(--border-color);
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg), 0 10px 40px rgba(0, 0, 0, 0.5);
+.card-header-clean {
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
 }
 
-.start-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.start-header h2 {
-  font-size: 24px;
+.card-header-clean h2 {
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.5px;
   background: linear-gradient(90deg, #fff, #c084fc);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.start-header p {
-  font-size: 14px;
+.card-header-clean p {
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
-/* Video List Section (Recent Projects) */
-.video-list-section {
-  margin-top: 30px;
-  border-top: 1px solid var(--border-color);
-  padding-top: 24px;
+/* Upload Section Customizations */
+.upload-section-card #drop-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 280px;
 }
 
-.video-list-section h3 {
+/* Recent Projects Container */
+.recent-projects-card {
+  max-height: calc(100vh - 180px);
+}
+
+.recent-projects-list {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding-right: 8px;
+}
+
+.projects-loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px;
   font-size: 14px;
+}
+
+/* Empty State placeholder */
+.empty-projects {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1.5px dashed var(--border-color);
+  border-radius: 16px;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}
+
+.empty-projects p {
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin-bottom: 6px;
 }
 
-.select-project-group {
-  display: grid;
-  grid-template-columns: 1fr 140px;
-  gap: 12px;
+.empty-projects span {
+  font-size: 12px;
+  color: var(--text-muted);
+  max-width: 280px;
 }
 
-.btn-open-project {
-  background: var(--grad-secondary);
-  color: #fff;
-  border: none;
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 10px;
+/* Project Item Card styling */
+.project-item-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.project-item-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.project-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #c084fc;
+  flex-shrink: 0;
 }
 
-.btn-open-project:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+.project-preview svg {
+  width: 24px;
+  height: 24px;
+}
+
+.project-info {
+  flex: 1;
+  min-width: 0; /* Ellipsis helper */
+}
+
+.project-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.project-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+.project-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.project-item-card:hover .project-actions {
+  opacity: 1;
+}
+
+.btn-action-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-action-icon:hover {
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.btn-action-icon.btn-open:hover {
+  background: var(--grad-secondary);
+  border-color: transparent;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.btn-action-icon.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+/* Error text */
+.error-text {
+  color: #f87171;
+  text-align: center;
+  padding: 20px;
+}
+
+/* ==========================================================================
+   WORKSPACE SCREEN LAYOUT - NATURAL SCROLL WITH STICKY SIDEBAR
+   ========================================================================== */
+.workspace-layout {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 40px;
+  max-width: 1600px;
+  margin: 0 auto;
+  gap: 16px;
 }
 
 /* Workspace Toolbar */
@@ -941,7 +1088,7 @@ select:focus {
   border: 1px solid var(--border-color);
   padding: 12px 20px;
   border-radius: 12px;
-  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .btn-back {
@@ -982,19 +1129,196 @@ select:focus {
   box-shadow: 0 0 8px #10b981;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  #main-container {
-    flex-direction: column;
-    padding: 0;
+/* Workspace Main Viewport */
+.workspace-content {
+  display: flex;
+  gap: 24px;
+}
+
+.workspace-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.workspace-right {
+  width: 460px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Subtitle Card customisations for fitting height */
+.subtitle-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 160px);
+  position: sticky;
+  top: 104px; /* Sticks nicely below sticky header */
+}
+
+#subtitle-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+}
+
+/* Responsive Layout */
+@media (max-width: 1100px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    min-height: auto;
   }
-  #right-panel {
+  .recent-projects-card {
+    max-height: 500px;
+  }
+}
+
+/* ==========================================================================
+   MODAL OVERLAY STYLING FOR VIDEO SPLICING
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.2s ease;
+}
+
+.modal-overlay .modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(18, 18, 29, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+}
+
+.input-group-clean {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group-clean label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.styled-file-input {
+  width: 100%;
+  padding: 10px;
+  background: #111118;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.styled-number-input {
+  width: 100%;
+  padding: 12px;
+  background: #111118;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 14px;
+  outline: none;
+}
+
+.styled-number-input:focus, .styled-file-input:focus {
+  border-color: #8b5cf6;
+}
+
+.input-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.loading-hint-text {
+  font-size: 11px;
+  color: #fb7185;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .workspace-content {
+    flex-direction: column;
+  }
+  .workspace-right {
     width: 100%;
   }
   .subtitle-card {
     max-height: 600px;
   }
-  .container-screen {
-    padding: 16px;
-  }
+}
+
+/* ==========================================================================
+   TIMELINE INSERTED VIDEO CLIPS VISUALIZATION
+   ========================================================================== */
+.timeline-clips-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.timeline-clip-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(139, 92, 246, 0.22); /* Purple semi-transparent overlay */
+  border-left: 2px dashed rgba(167, 139, 250, 0.6);
+  border-right: 2px dashed rgba(167, 139, 250, 0.6);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #d8b4fe;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  pointer-events: auto;
+  cursor: help;
+  transition: background 0.2s ease;
+  overflow: hidden; /* Prevent text wrapping vertically on narrow widths */
+}
+
+.timeline-clip-block span {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+  padding: 0 2px;
+}
+
+.timeline-clip-block:hover {
+  background: rgba(139, 92, 246, 0.35);
 }

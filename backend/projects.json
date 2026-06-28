@@ -1,18 +1,4 @@
 {
-  "90765973": {
-    "id": "90765973",
-    "filename": "90765973.mp4",
-    "original_name": "0520(1).mp4",
-    "path": "uploads\\90765973.mp4",
-    "duration": 781.38
-  },
-  "ff884341": {
-    "id": "ff884341",
-    "filename": "ff884341.mp4",
-    "original_name": "0520(1).mp4",
-    "path": "uploads\\ff884341.mp4",
-    "duration": 781.38
-  },
   "2286aba8": {
     "id": "2286aba8",
     "filename": "2286aba8.mp4",
@@ -48,5 +34,216 @@
     "render_progress": 100,
     "render_error": null,
     "output": "output_4e2977bd.mp4"
+  },
+  "19e60824": {
+    "id": "19e60824",
+    "filename": "19e60824.mp4",
+    "original_name": "0520(1)_inserted.mp4",
+    "path": "uploads\\19e60824.mp4",
+    "duration": 791.41,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 10.03,
+        "end": 13.03,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 309.01,
+        "end": 312.61,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [
+      {
+        "start": 0.0,
+        "duration": 10.029999999999973
+      }
+    ]
+  },
+  "73902b5b": {
+    "id": "73902b5b",
+    "filename": "73902b5b.mp4",
+    "original_name": "0520(1)_inserted.mp4",
+    "path": "uploads\\73902b5b.mp4",
+    "duration": 791.41,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 10.03,
+        "end": 13.03,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 309.01,
+        "end": 312.61,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [
+      {
+        "start": 0.0,
+        "duration": 10.029999999999973
+      }
+    ]
+  },
+  "b793131e": {
+    "id": "b793131e",
+    "filename": "b793131e.mp4",
+    "original_name": "0520(1)_inserted_inserted.mp4",
+    "path": "uploads\\b793131e.mp4",
+    "duration": 799.46,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 10.03,
+        "end": 13.03,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 317.06,
+        "end": 320.66,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [
+      {
+        "start": 0.0,
+        "duration": 10.029999999999973
+      },
+      {
+        "start": 105.66,
+        "duration": 8.050000000000068
+      }
+    ]
+  },
+  "e1b375d7": {
+    "id": "e1b375d7",
+    "filename": "e1b375d7.mp4",
+    "original_name": "0520(1)_inserted_inserted_inserted.mp4",
+    "path": "uploads\\e1b375d7.mp4",
+    "duration": 789.49,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 0.0,
+        "end": 3.0,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 307.04,
+        "end": 310.64,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [
+      {
+        "start": 217.93,
+        "duration": 8.059999999999945
+      }
+    ]
+  },
+  "dac31b33": {
+    "id": "dac31b33",
+    "filename": "dac31b33.mp4",
+    "original_name": "0520(1)_inserted.mp4",
+    "path": "uploads\\dac31b33.mp4",
+    "duration": 791.46,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 0.0,
+        "end": 3.0,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 309.06,
+        "end": 312.66,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [
+      {
+        "start": 134.71,
+        "duration": 10.080000000000041
+      }
+    ]
+  },
+  "3417ccd4": {
+    "id": "3417ccd4",
+    "filename": "del_7e422fe1.mp4",
+    "original_name": "0520(1)_inserted_inserted_deleted_deleted.mp4",
+    "path": "uploads\\del_7e422fe1.mp4",
+    "duration": 781.49,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 0.0,
+        "end": 3.0,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 298.98,
+        "end": 302.58,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": []
+  },
+  "e1d371e0": {
+    "id": "e1d371e0",
+    "filename": "del_21853a42.mp4",
+    "original_name": "0520(1)_inserted_inserted_deleted_deleted_inserted_deleted.mp4",
+    "path": "uploads\\del_21853a42.mp4",
+    "duration": 781.48,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 0.0,
+        "end": 3.0,
+        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
+        "voice": "vi"
+      },
+      {
+        "id": "sub_2",
+        "start": 298.98,
+        "end": 302.58,
+        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": []
   }
 }

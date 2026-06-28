@@ -28,7 +28,9 @@ app.add_middleware(
 )
 
 # File-based database persistence
+import threading
 DB_FILE = Path("projects.json")
+db_lock = threading.Lock()
 
 def load_db():
     if DB_FILE.exists():
@@ -41,11 +43,12 @@ def load_db():
     return {}
 
 def save_db(db):
-    try:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(db, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Error saving database: {e}")
+    with db_lock:
+        try:
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump(db, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Error saving database: {e}")
 
 # Load video database from file
 videos_db = load_db()
@@ -301,6 +304,817 @@ def delete_video(video_id: str):
         if op.exists():
             op.unlink()
     return {"status": "deleted"}
+
+
+merge_tasks = {}
+
+def run_merge_task(task_id, video_id, insert_time, ins_filepath, merged_filepath, merged_id, new_original_name):
+    import threading
+    import os
+    import re
+    import subprocess
+    import imageio_ffmpeg
+    from moviepy.editor import VideoFileClip
+    
+    merge_tasks[task_id] = {
+        "status": "processing",
+        "progress": 5,
+        "status_text": "Đang phân tích cấu trúc video...",
+        "output_id": None,
+        "error": None
+    }
+    
+    processed_successfully = False
+    
+    try:
+        video = videos_db.get(video_id)
+        if not video:
+            raise Exception("Video gốc không tồn tại")
+            
+        ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+        
+        # Open original
+        orig_clip = VideoFileClip(video["path"])
+        w, h = orig_clip.w, orig_clip.h
+        fps = orig_clip.fps
+        ar = orig_clip.audio.fps if orig_clip.audio else 44100
+        duration = orig_clip.duration
+        orig_clip.close()
+        
+        # Open insert clip to get its duration for progress calculation
+        ins_clip = VideoFileClip(str(ins_filepath))
+        ins_duration = ins_clip.duration
+        ins_clip.close()
+        
+        ins_matched_path = UPLOAD_DIR / f"ins_matched_{task_id}.mp4"
+        part1_path = UPLOAD_DIR / f"part1_{task_id}.mp4"
+        part2_path = UPLOAD_DIR / f"part2_{task_id}.mp4"
+        list_path = UPLOAD_DIR / f"list_{task_id}.txt"
+        
+        merge_tasks[task_id]["status_text"] = "Đang đồng bộ định dạng clip chèn (0%)..."
+        merge_tasks[task_id]["progress"] = 10
+        
+        # 1. Re-encode insert clip to match original video properties
+        reencode_cmd = [
+            ffmpeg_bin, "-y",
+            "-i", str(ins_filepath),
+            "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2",
+            "-r", str(fps),
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-ar", str(ar),
+            "-ac", "2",
+            str(ins_matched_path)
+        ]
+        
+        # Start reencode process and read progress from stderr/stdout
+        process = subprocess.Popen(
+            reencode_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            encoding="utf-8"
+        )
+        
+        # Parse output for progress (reencoding accounts for 10% to 75% of total progress)
+        time_pattern = re.compile(r"time=(\d+):(\d+):(\d+\.\d+)")
+        for line in iter(process.stdout.readline, ""):
+            match = time_pattern.search(line)
+            if match and ins_duration > 0:
+                hours, minutes, seconds = match.groups()
+                elapsed = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+                ratio = min(1.0, elapsed / ins_duration)
+                merge_tasks[task_id]["progress"] = int(10 + ratio * 65)
+                merge_tasks[task_id]["status_text"] = f"Đang đồng bộ định dạng clip chèn ({int(ratio * 100)}%)..."
+                
+        process.wait()
+        if process.returncode != 0:
+            raise Exception("Lỗi khi đồng bộ định dạng clip chèn")
+            
+        merge_tasks[task_id]["status_text"] = "Đang cắt nhỏ video gốc..."
+        merge_tasks[task_id]["progress"] = 80
+        
+        # 2. Slice original video into part 1 and part 2 (using stream copy - instant!)
+        split1_cmd = [
+            ffmpeg_bin, "-y",
+            "-i", video["path"],
+            "-t", str(insert_time),
+            "-c", "copy",
+            "-map", "0",
+            str(part1_path)
+        ]
+        split2_cmd = [
+            ffmpeg_bin, "-y",
+            "-ss", str(insert_time),
+            "-i", video["path"],
+            "-c", "copy",
+            "-map", "0",
+            str(part2_path)
+        ]
+        subprocess.run(split1_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(split2_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        
+        merge_tasks[task_id]["status_text"] = "Đang ghép nối các phần video..."
+        merge_tasks[task_id]["progress"] = 90
+        
+        # 3. Write files list for concat demuxer
+        with open(list_path, "w", encoding="utf-8") as f:
+            f.write(f"file '{part1_path.name}'\n")
+            f.write(f"file '{ins_matched_path.name}'\n")
+            f.write(f"file '{part2_path.name}'\n")
+            
+        # 4. Concatenate using stream copy
+        concat_cmd = [
+            ffmpeg_bin, "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_path.name,
+            "-c", "copy",
+            merged_filepath.name
+        ]
+        subprocess.run(concat_cmd, cwd=str(UPLOAD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        
+        # Cleanup temporary slice parts
+        for temp_path in [ins_filepath, ins_matched_path, part1_path, part2_path, list_path]:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+                    
+        processed_successfully = True
+        
+    except Exception as ffmpeg_err:
+        print(f"Fast FFmpeg concatenate failed, falling back to MoviePy: {ffmpeg_err}")
+        # Clean up any temp files that were created
+        for temp_path in [UPLOAD_DIR / f"ins_matched_{task_id}.mp4", UPLOAD_DIR / f"part1_{task_id}.mp4", UPLOAD_DIR / f"part2_{task_id}.mp4", UPLOAD_DIR / f"list_{task_id}.txt"]:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+
+    # 2. Fallback to MoviePy (slower, but full render safety)
+    if not processed_successfully:
+        try:
+            merge_tasks[task_id]["status_text"] = "Đang ghép video qua MoviePy (chậm hơn)..."
+            merge_tasks[task_id]["progress"] = 30
+            
+            from moviepy.editor import VideoFileClip, concatenate_videoclips
+            
+            orig_clip = VideoFileClip(video["path"])
+            ins_clip = VideoFileClip(str(ins_filepath))
+            
+            w, h = orig_clip.w, orig_clip.h
+            try:
+                ins_clip_resized = ins_clip.resize(newsize=(w, h))
+            except Exception:
+                from moviepy.video.fx.all import resize
+                ins_clip_resized = resize(ins_clip, newsize=(w, h))
+                
+            duration = orig_clip.duration
+            ins_duration = ins_clip.duration
+            
+            if insert_time <= 0:
+                final_clip = concatenate_videoclips([ins_clip_resized, orig_clip])
+            elif insert_time >= duration:
+                final_clip = concatenate_videoclips([orig_clip, ins_clip_resized])
+            else:
+                part1 = orig_clip.subclip(0, insert_time)
+                part2 = orig_clip.subclip(insert_time, duration)
+                final_clip = concatenate_videoclips([part1, ins_clip_resized, part2])
+                
+            final_clip.write_videofile(
+                str(merged_filepath),
+                codec="libx264",
+                audio_codec="aac",
+                temp_audiofile=f"__temp_audio_merge_{task_id}.m4a",
+                remove_temp=True,
+                verbose=False,
+                logger=None
+            )
+            
+            # Close files
+            orig_clip.close()
+            ins_clip.close()
+            ins_clip_resized.close()
+            final_clip.close()
+            
+            # Clean up the uploaded insert file
+            if ins_filepath.exists():
+                ins_filepath.unlink()
+                
+            processed_successfully = True
+        except Exception as moviepy_err:
+            if ins_filepath.exists():
+                ins_filepath.unlink()
+            if merged_filepath.exists():
+                merged_filepath.unlink()
+            merge_tasks[task_id]["status"] = "failed"
+            merge_tasks[task_id]["error"] = f"MoviePy failed: {str(moviepy_err)}"
+            merge_tasks[task_id]["status_text"] = f"Lỗi: {str(moviepy_err)}"
+            return
+
+    # Update database and complete task
+    if processed_successfully:
+        try:
+            # Update database with the new video info
+            merge_tasks[task_id]["status_text"] = "Đang cập nhật cơ sở dữ liệu phụ đề..."
+            merge_tasks[task_id]["progress"] = 95
+            
+            try:
+                clip = VideoFileClip(str(merged_filepath))
+                new_duration = clip.duration
+                clip.close()
+            except Exception:
+                new_duration = duration + ins_duration
+                
+            inserted_duration = new_duration - duration
+            shifted_subtitles = []
+            for sub in video.get("subtitles", []):
+                new_sub = sub.copy()
+                if sub["start"] >= insert_time:
+                    new_sub["start"] = round(sub["start"] + inserted_duration, 2)
+                    new_sub["end"] = round(sub["end"] + inserted_duration, 2)
+                shifted_subtitles.append(new_sub)
+                
+            shifted_inserted_clips = []
+            for ic in video.get("inserted_clips", []):
+                new_ic = ic.copy()
+                if ic["start"] >= insert_time:
+                    new_ic["start"] = round(ic["start"] + inserted_duration, 2)
+                shifted_inserted_clips.append(new_ic)
+                
+            shifted_inserted_clips.append({
+                "start": insert_time,
+                "duration": inserted_duration
+            })
+            
+            videos_db[merged_id] = {
+                "id": merged_id,
+                "filename": merged_filepath.name,
+                "original_name": new_original_name,
+                "path": str(merged_filepath),
+                "duration": new_duration,
+                "subtitles": shifted_subtitles,
+                "voice_enabled": video.get("voice_enabled", True),
+                "voice_lang": video.get("voice_lang", "vi"),
+                "inserted_clips": shifted_inserted_clips
+            }
+            save_db(videos_db)
+            
+            merge_tasks[task_id]["status"] = "completed"
+            merge_tasks[task_id]["progress"] = 100
+            merge_tasks[task_id]["status_text"] = "Ghép video thành công!"
+            merge_tasks[task_id]["output_id"] = merged_id
+            
+        except Exception as db_err:
+            merge_tasks[task_id]["status"] = "failed"
+            merge_tasks[task_id]["error"] = str(db_err)
+            merge_tasks[task_id]["status_text"] = f"Lỗi: {str(db_err)}"
+
+@app.post("/api/video/{video_id}/insert-clip")
+async def insert_video_clip(
+    video_id: str,
+    insert_time: float = Form(...),
+    file: UploadFile = File(...)
+):
+    import uuid
+    import threading
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+
+    # 1. Save uploaded insert clip
+    ins_id = str(uuid.uuid4())[:8]
+    ins_ext = os.path.splitext(file.filename or "insert.mp4")[1] or ".mp4"
+    ins_filename = f"insert_{ins_id}{ins_ext}"
+    ins_filepath = UPLOAD_DIR / ins_filename
+
+    with open(ins_filepath, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    # 2. Prepare output path
+    merged_id = str(uuid.uuid4())[:8]
+    merged_filename = f"{merged_id}.mp4"
+    merged_filepath = UPLOAD_DIR / merged_filename
+
+    orig_name = video.get("original_name", "video.mp4")
+    name_wo_ext = os.path.splitext(orig_name)[0]
+    new_original_name = f"{name_wo_ext}_inserted.mp4"
+
+    # Start merge in background thread
+    task_id = str(uuid.uuid4())[:8]
+    thread = threading.Thread(
+        target=run_merge_task,
+        args=(task_id, video_id, insert_time, ins_filepath, merged_filepath, merged_id, new_original_name)
+    )
+    thread.daemon = True
+    thread.start()
+
+    return {"task_id": task_id}
+
+@app.get("/api/video/merge-status/{task_id}")
+async def get_merge_status(task_id: str):
+    task = merge_tasks.get(task_id, {"status": "failed", "error": "Task not found"})
+    return task
+
+class MoveClipPayload(BaseModel):
+    new_start: float
+
+@app.post("/api/video/{video_id}/delete-clip/{clip_index}")
+def delete_spliced_clip(video_id: str, clip_index: int):
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+        
+    inserted_clips = video.get("inserted_clips", [])
+    if clip_index < 0 or clip_index >= len(inserted_clips):
+        raise HTTPException(400, "Invalid clip index")
+        
+    clip = inserted_clips[clip_index]
+    clip_start = clip["start"]
+    clip_duration = clip["duration"]
+    clip_end = clip_start + clip_duration
+    
+    import subprocess
+    import imageio_ffmpeg
+    import uuid
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    
+    temp_id = str(uuid.uuid4())[:8]
+    part1_path = UPLOAD_DIR / f"part1_del_{temp_id}.mp4"
+    part2_path = UPLOAD_DIR / f"part2_del_{temp_id}.mp4"
+    list_path = UPLOAD_DIR / f"list_del_{temp_id}.txt"
+    
+    # Save output to a new filename to prevent Windows OS file lock issues
+    new_filename = f"del_{temp_id}.mp4"
+    new_filepath = UPLOAD_DIR / new_filename
+    
+    try:
+        # Determine if we need to slice part 1 and part 2 (avoid tiny slices below 0.05s)
+        need_part1 = clip_start > 0.05
+        need_part2 = clip_end < (video.get("duration", 0) - 0.05)
+        
+        if need_part1 and need_part2:
+            # 1. Slice part 1: 0 to clip_start
+            split1_cmd = [
+                ffmpeg_bin, "-y",
+                "-i", video["path"],
+                "-t", str(clip_start),
+                "-c", "copy",
+                "-map", "0",
+                str(part1_path)
+            ]
+            # 2. Slice part 2: clip_end to end
+            split2_cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(clip_end),
+                "-i", video["path"],
+                "-c", "copy",
+                "-map", "0",
+                str(part2_path)
+            ]
+            subprocess.run(split1_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            subprocess.run(split2_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+            # 3. Concatenate part 1 & part 2
+            with open(list_path, "w", encoding="utf-8") as f:
+                f.write(f"file '{part1_path.name}'\n")
+                f.write(f"file '{part2_path.name}'\n")
+                
+            concat_cmd = [
+                ffmpeg_bin, "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_path.name,
+                "-c", "copy",
+                new_filepath.name
+            ]
+            subprocess.run(concat_cmd, cwd=str(UPLOAD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        elif need_part1:
+            # Spliced clip was at the very end, we only need part 1
+            split_cmd = [
+                ffmpeg_bin, "-y",
+                "-i", video["path"],
+                "-t", str(clip_start),
+                "-c", "copy",
+                "-map", "0",
+                str(new_filepath)
+            ]
+            subprocess.run(split_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        elif need_part2:
+            # Spliced clip was at the very beginning, we only need part 2
+            split_cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(clip_end),
+                "-i", video["path"],
+                "-c", "copy",
+                "-map", "0",
+                str(new_filepath)
+            ]
+            subprocess.run(split_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        else:
+            raise Exception("Không thể xóa clip vì đây là phần nội dung duy nhất của video.")
+            
+        # Cleanup temp slicing files
+        for temp_path in [part1_path, part2_path, list_path]:
+            if temp_path.exists():
+                temp_path.unlink()
+                
+        # Try to delete the old video file. If locked, ignore and let GC clean it later!
+        old_path = Path(video["path"])
+        if old_path.exists():
+            try:
+                old_path.unlink()
+            except Exception as unlink_err:
+                print(f"Warning: Could not delete old file {old_path}: {unlink_err}")
+                
+    except Exception as e:
+        for temp_path in [part1_path, part2_path, list_path, new_filepath]:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+        raise HTTPException(500, f"Error processing clip deletion: {str(e)}")
+        
+    # Shift subtitles
+    shifted_subtitles = []
+    for sub in video.get("subtitles", []):
+        s = sub["start"]
+        e = sub["end"]
+        
+        # 1. Entirely inside deleted segment
+        if s >= clip_start and e <= clip_end:
+            continue
+            
+        new_sub = sub.copy()
+        
+        # 2. Entirely before
+        if e <= clip_start:
+            pass
+        # 3. Entirely after
+        elif s >= clip_end:
+            new_sub["start"] = round(s - clip_duration, 2)
+            new_sub["end"] = round(e - clip_duration, 2)
+        # 4. Spans across the entire deleted segment
+        elif s < clip_start and e > clip_end:
+            new_sub["end"] = round(e - clip_duration, 2)
+        # 5. Overlaps start of delete segment
+        elif s < clip_start and e > clip_start:
+            new_sub["end"] = clip_start
+        # 6. Overlaps end of delete segment
+        elif s >= clip_start and e > clip_end:
+            new_sub["start"] = clip_start
+            new_sub["end"] = round(e - clip_duration, 2)
+            
+        shifted_subtitles.append(new_sub)
+        
+    # Shift remaining inserted clips
+    shifted_inserted_clips = []
+    for idx, ic in enumerate(inserted_clips):
+        if idx == clip_index:
+            continue
+        new_ic = ic.copy()
+        if ic["start"] >= clip_end:
+            new_ic["start"] = round(ic["start"] - clip_duration, 2)
+        shifted_inserted_clips.append(new_ic)
+        
+    # Calculate new duration
+    try:
+        from moviepy.editor import VideoFileClip
+        clip_obj = VideoFileClip(str(new_filepath))
+        new_duration = clip_obj.duration
+        clip_obj.close()
+    except Exception:
+        new_duration = max(0.0, video.get("duration", 0) - clip_duration)
+
+    orig_name = video.get("original_name", "video.mp4")
+    name_wo_ext = os.path.splitext(orig_name)[0]
+    new_original_name = f"{name_wo_ext}_deleted.mp4"
+    
+    # Update current database entry
+    video["path"] = str(new_filepath)
+    video["filename"] = new_filename
+    video["original_name"] = new_original_name
+    video["duration"] = new_duration
+    video["subtitles"] = shifted_subtitles
+    video["inserted_clips"] = shifted_inserted_clips
+    
+    videos_db[video_id] = video
+    save_db(videos_db)
+    
+    return {"status": "success", "output_id": video_id}
+
+@app.post("/api/video/{video_id}/move-clip/{clip_index}")
+def move_spliced_clip(video_id: str, clip_index: int, payload: MoveClipPayload):
+    new_start = payload.new_start
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+        
+    inserted_clips = video.get("inserted_clips", [])
+    if clip_index < 0 or clip_index >= len(inserted_clips):
+        raise HTTPException(400, "Invalid clip index")
+        
+    clip = inserted_clips[clip_index]
+    clip_start = clip["start"]
+    clip_duration = clip["duration"]
+    clip_end = clip_start + clip_duration
+    
+    import subprocess
+    import imageio_ffmpeg
+    import uuid
+    ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+    
+    temp_id = str(uuid.uuid4())[:8]
+    extracted_clip_path = UPLOAD_DIR / f"clip_ext_{temp_id}.mp4"
+    part1_del_path = UPLOAD_DIR / f"part1_del_{temp_id}.mp4"
+    part2_del_path = UPLOAD_DIR / f"part2_del_{temp_id}.mp4"
+    list_del_path = UPLOAD_DIR / f"list_del_{temp_id}.txt"
+    recovered_orig_path = UPLOAD_DIR / f"recovered_{temp_id}.mp4"
+    
+    partA_path = UPLOAD_DIR / f"partA_{temp_id}.mp4"
+    partB_path = UPLOAD_DIR / f"partB_{temp_id}.mp4"
+    list_move_path = UPLOAD_DIR / f"list_move_{temp_id}.txt"
+    
+    # Save output to a new filename to prevent Windows OS file lock issues
+    new_filename = f"move_{temp_id}.mp4"
+    new_filepath = UPLOAD_DIR / new_filename
+    
+    try:
+        # Step 1: Extract the inserted clip segment
+        extract_cmd = [
+            ffmpeg_bin, "-y",
+            "-ss", str(clip_start),
+            "-i", video["path"],
+            "-t", str(clip_duration),
+            "-c", "copy",
+            "-map", "0",
+            str(extracted_clip_path)
+        ]
+        subprocess.run(extract_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        
+        # Step 2: Remove the clip segment from compiled video to get recovered_orig
+        need_part1 = clip_start > 0.05
+        need_part2 = clip_end < (video.get("duration", 0) - 0.05)
+        
+        if need_part1 and need_part2:
+            split1_cmd = [
+                ffmpeg_bin, "-y",
+                "-i", video["path"],
+                "-t", str(clip_start),
+                "-c", "copy",
+                "-map", "0",
+                str(part1_del_path)
+            ]
+            split2_cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(clip_end),
+                "-i", video["path"],
+                "-c", "copy",
+                "-map", "0",
+                str(part2_del_path)
+            ]
+            subprocess.run(split1_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            subprocess.run(split2_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+            with open(list_del_path, "w", encoding="utf-8") as f:
+                f.write(f"file '{part1_del_path.name}'\n")
+                f.write(f"file '{part2_del_path.name}'\n")
+                
+            concat_del_cmd = [
+                ffmpeg_bin, "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_del_path.name,
+                "-c", "copy",
+                recovered_orig_path.name
+            ]
+            subprocess.run(concat_del_cmd, cwd=str(UPLOAD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        elif need_part1:
+            split_cmd = [
+                ffmpeg_bin, "-y",
+                "-i", video["path"],
+                "-t", str(clip_start),
+                "-c", "copy",
+                "-map", "0",
+                str(recovered_orig_path)
+            ]
+            subprocess.run(split_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        elif need_part2:
+            split_cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(clip_end),
+                "-i", video["path"],
+                "-c", "copy",
+                "-map", "0",
+                str(recovered_orig_path)
+            ]
+            subprocess.run(split_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        else:
+            raise Exception("Không thể di chuyển clip vì đây là phần nội dung duy nhất của video.")
+            
+        # Step 3: Split recovered_orig at new_start into partA and partB
+        from moviepy.editor import VideoFileClip
+        rec_clip = VideoFileClip(str(recovered_orig_path))
+        rec_duration = rec_clip.duration
+        rec_clip.close()
+        
+        target_start = min(rec_duration, max(0.0, new_start))
+        
+        need_partA = target_start > 0.05
+        need_partB = target_start < (rec_duration - 0.05)
+        
+        if need_partA and need_partB:
+            splitA_cmd = [
+                ffmpeg_bin, "-y",
+                "-i", str(recovered_orig_path),
+                "-t", str(target_start),
+                "-c", "copy",
+                "-map", "0",
+                str(partA_path)
+            ]
+            splitB_cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(target_start),
+                "-i", str(recovered_orig_path),
+                "-c", "copy",
+                "-map", "0",
+                str(partB_path)
+            ]
+            subprocess.run(splitA_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            subprocess.run(splitB_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+            with open(list_move_path, "w", encoding="utf-8") as f:
+                f.write(f"file '{partA_path.name}'\n")
+                f.write(f"file '{extracted_clip_path.name}'\n")
+                f.write(f"file '{partB_path.name}'\n")
+                
+            concat_move_cmd = [
+                ffmpeg_bin, "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_move_path.name,
+                "-c", "copy",
+                new_filepath.name
+            ]
+            subprocess.run(concat_move_cmd, cwd=str(UPLOAD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        elif need_partA:
+            # Move to the very end
+            with open(list_move_path, "w", encoding="utf-8") as f:
+                f.write(f"file '{recovered_orig_path.name}'\n")
+                f.write(f"file '{extracted_clip_path.name}'\n")
+                
+            concat_move_cmd = [
+                ffmpeg_bin, "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_move_path.name,
+                "-c", "copy",
+                new_filepath.name
+            ]
+            subprocess.run(concat_move_cmd, cwd=str(UPLOAD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        elif need_partB:
+            # Move to the very beginning
+            with open(list_move_path, "w", encoding="utf-8") as f:
+                f.write(f"file '{extracted_clip_path.name}'\n")
+                f.write(f"file '{recovered_orig_path.name}'\n")
+                
+            concat_move_cmd = [
+                ffmpeg_bin, "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_move_path.name,
+                "-c", "copy",
+                new_filepath.name
+            ]
+            subprocess.run(concat_move_cmd, cwd=str(UPLOAD_DIR), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+        else:
+            raise Exception("Độ dài video quá ngắn.")
+            
+        # Try to delete the old video file. If locked, ignore and let GC clean it later!
+        old_path = Path(video["path"])
+        if old_path.exists():
+            try:
+                old_path.unlink()
+            except Exception as unlink_err:
+                print(f"Warning: Could not delete old file {old_path}: {unlink_err}")
+                
+        # Cleanup temp
+        for temp_path in [extracted_clip_path, part1_del_path, part2_del_path, list_del_path, recovered_orig_path, partA_path, partB_path, list_move_path]:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+                
+    except Exception as e:
+        for temp_path in [extracted_clip_path, part1_del_path, part2_del_path, list_del_path, recovered_orig_path, partA_path, partB_path, list_move_path, new_filepath]:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    pass
+        raise HTTPException(500, f"Error processing clip move: {str(e)}")
+        
+    # --- SUBTITLE SHIFTING FOR MOVE ---
+    # First: simulate deletion of the clip
+    temp_subs = []
+    for sub in video.get("subtitles", []):
+        s = sub["start"]
+        e = sub["end"]
+        if s >= clip_start and e <= clip_end:
+            continue
+        new_sub = sub.copy()
+        if e <= clip_start:
+            pass
+        elif s >= clip_end:
+            new_sub["start"] = round(s - clip_duration, 2)
+            new_sub["end"] = round(e - clip_duration, 2)
+        elif s < clip_start and e > clip_end:
+            new_sub["end"] = round(e - clip_duration, 2)
+        elif s < clip_start and e > clip_start:
+            new_sub["end"] = clip_start
+        elif s >= clip_start and e > clip_end:
+            new_sub["start"] = clip_start
+            new_sub["end"] = round(e - clip_duration, 2)
+        temp_subs.append(new_sub)
+        
+    # Second: simulate insertion of the clip at target_start
+    shifted_subtitles = []
+    for sub in temp_subs:
+        s = sub["start"]
+        e = sub["end"]
+        new_sub = sub.copy()
+        if s >= target_start:
+            new_sub["start"] = round(s + clip_duration, 2)
+            new_sub["end"] = round(e + clip_duration, 2)
+        elif s < target_start and e > target_start:
+            new_sub["end"] = target_start
+        shifted_subtitles.append(new_sub)
+        
+    # --- INSERTED CLIPS SHIFTING FOR MOVE ---
+    temp_clips = []
+    for idx, ic in enumerate(inserted_clips):
+        if idx == clip_index:
+            continue
+        new_ic = ic.copy()
+        if ic["start"] >= clip_end:
+            new_ic["start"] = round(ic["start"] - clip_duration, 2)
+        temp_clips.append(new_ic)
+        
+    shifted_inserted_clips = []
+    for ic in temp_clips:
+        new_ic = ic.copy()
+        if ic["start"] >= target_start:
+            new_ic["start"] = round(ic["start"] + clip_duration, 2)
+        shifted_inserted_clips.append(new_ic)
+        
+    shifted_inserted_clips.append({
+        "start": target_start,
+        "duration": clip_duration
+    })
+    
+    shifted_inserted_clips.sort(key=lambda x: x["start"])
+    
+    # Update project
+    try:
+        from moviepy.editor import VideoFileClip
+        clip_obj = VideoFileClip(str(new_filepath))
+        new_duration = clip_obj.duration
+        clip_obj.close()
+    except Exception:
+        new_duration = video.get("duration", 0)
+
+    orig_name = video.get("original_name", "video.mp4")
+    name_wo_ext = os.path.splitext(orig_name)[0]
+    new_original_name = f"{name_wo_ext}_moved.mp4"
+    
+    # Update current database entry
+    video["path"] = str(new_filepath)
+    video["filename"] = new_filename
+    video["original_name"] = new_original_name
+    video["duration"] = new_duration
+    video["subtitles"] = shifted_subtitles
+    video["inserted_clips"] = shifted_inserted_clips
+    
+    videos_db[video_id] = video
+    save_db(videos_db)
+    
+    return {"status": "success", "output_id": video_id}
 
 
 def _generate_voice_only(subtitles: list, output_path: str, lang: str = "vi", video_duration: float = 60.0):
