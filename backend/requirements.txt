@@ -6,3 +6,4 @@ gTTS==2.5.1
 pydub==0.25.1
 aiofiles==23.2.1
 imageio-ffmpeg==0.4.9
+httpx==0.28.1

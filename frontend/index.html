@@ -92,6 +92,13 @@
             </svg>
             🧩 Ghép thêm clip video
           </button>
+          <button id="btn-open-settings" class="btn-back" style="border-color: rgba(59, 130, 246, 0.4); color: #93c5fd; margin-left: auto;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg" style="color: #93c5fd;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Cài đặt
+          </button>
         </div>
         <div class="active-project-title">
           <span class="dot-active"></span> Đang biên tập: <strong id="active-video-name">...</strong>
@@ -316,6 +323,59 @@
         <button id="btn-delete-clip" class="btn-action-danger" style="margin-right: auto; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: all 0.2s ease;">🗑️ Xóa clip</button>
         <button id="btn-cancel-manage" class="btn-action-secondary">Hủy bỏ</button>
         <button id="btn-submit-move" class="btn-action-primary">Di chuyển</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card card">
+      <div class="card-header-clean">
+        <h2>Cài đặt LLM API</h2>
+        <p>Cấu hình API dịch phụ đề (hỗ trợ llama.cpp / OpenAI-compatible)</p>
+      </div>
+      <div class="modal-body">
+        <div class="input-group-clean">
+          <label for="settings-api-url">API URL <span style="color: #fb7185;">*</span></label>
+          <input type="text" id="settings-api-url" class="styled-number-input" placeholder="http://localhost:8080" value="http://localhost:8080">
+          <span class="input-hint">Ví dụ: http://localhost:8080 (llama.cpp server mặc định)</span>
+        </div>
+        <div class="input-group-clean" style="margin-top: 14px;">
+          <label for="settings-model">Model name <span style="color: #64748b;">(tùy chọn)</span></label>
+          <input type="text" id="settings-model" class="styled-number-input" placeholder="Để trống nếu không cần">
+          <span class="input-hint">Ví dụ: llama-3.2-3b-instruct, gemma-2-2b-it,...</span>
+        </div>
+        <div class="input-group-clean" style="margin-top: 14px;">
+          <label>Ngôn ngữ mặc định</label>
+          <div style="display: flex; gap: 12px;">
+            <select id="settings-src-lang" class="styled-number-input" style="flex:1;">
+              <option value="">Tự động</option>
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+            <span style="color: #64748b; align-self: center;">→</span>
+            <select id="settings-dst-lang" class="styled-number-input" style="flex:1;">
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+        </div>
+        <div id="settings-test-result" style="margin-top: 12px; font-size: 13px; color: #94a3b8; display:none;"></div>
+      </div>
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button id="btn-test-llm" class="btn-action-secondary">Kiểm tra kết nối</button>
+        <button id="btn-cancel-settings" class="btn-action-secondary">Hủy</button>
+        <button id="btn-save-settings" class="btn-action-primary">Lưu cài đặt</button>
       </div>
     </div>
   </div>

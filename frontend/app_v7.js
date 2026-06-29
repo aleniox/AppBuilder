@@ -400,8 +400,9 @@ function loadSubtitles() {
         <textarea rows="1" data-idx="${idx}" data-field="text">${escHtml(sub.text)}</textarea>
       </div>
       <div class="sub-actions">
-        <button onclick="jumpToSub(${idx})">⏩</button>
-        <button onclick="deleteSub(${idx})">🗑</button>
+        <button onclick="jumpToSub(${idx})" title="Nhảy tới">⏩</button>
+        <button onclick="translateSub(${idx})" title="Dịch phụ đề">🌐</button>
+        <button onclick="deleteSub(${idx})" title="Xóa">🗑</button>
       </div>
     </div>
   `).join('');
@@ -604,9 +605,23 @@ async function saveAndRender(isAudio) {
           btnRenderAudio.disabled = false;
 
           downloadArea.style.display = 'block';
-          downloadArea.innerHTML = `
-            <a href="${API}/api/download/${data.output}" target="_blank" class="btn-primary" style="text-decoration:none">
-              ⬇ Tải xuống ${data.output.endsWith('.mp3') ? 'Audio' : 'Video'}
+          const isAudio = data.output.endsWith('.mp3');
+          const previewUrl = `${API}/api/download/${data.output}?t=${Date.now()}`;
+          downloadArea.innerHTML = isAudio ? `
+            <div class="preview-section">
+              <h4 style="margin:0 0 8px 0; color:#e2e8f0; font-size:14px;">🎧 Nghe thử kết quả:</h4>
+              <audio src="${previewUrl}" controls style="width:100%"></audio>
+            </div>
+            <a href="${previewUrl}" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; margin-top:10px">
+              ⬇ Tải xuống Audio
+            </a>
+          ` : `
+            <div class="preview-section">
+              <h4 style="margin:0 0 8px 0; color:#e2e8f0; font-size:14px;">🎬 Xem thử kết quả:</h4>
+              <video src="${previewUrl}" controls style="width:100%; max-height:300px; border-radius:8px;"></video>
+            </div>
+            <a href="${previewUrl}" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; margin-top:10px">
+              ⬇ Tải xuống Video
             </a>
           `;
         } else if (data.status === "failed") {
@@ -1265,6 +1280,177 @@ if (btnSubmitMove) {
   });
 }
 
+// ===== Settings & Translate =====
+const btnOpenSettings = document.getElementById('btn-open-settings');
+const settingsModal = document.getElementById('settings-modal');
+const btnCancelSettings = document.getElementById('btn-cancel-settings');
+const btnSaveSettings = document.getElementById('btn-save-settings');
+const btnTestLlm = document.getElementById('btn-test-llm');
+const settingsApiUrl = document.getElementById('settings-api-url');
+const settingsModel = document.getElementById('settings-model');
+const settingsSrcLang = document.getElementById('settings-src-lang');
+const settingsDstLang = document.getElementById('settings-dst-lang');
+const settingsTestResult = document.getElementById('settings-test-result');
+
+async function loadSettings() {
+  try {
+    const res = await fetch(`${API}/api/settings`);
+    const s = await res.json();
+    if (settingsApiUrl) settingsApiUrl.value = s.api_url || 'http://localhost:8080';
+    if (settingsModel) settingsModel.value = s.model || '';
+    if (settingsSrcLang) settingsSrcLang.value = s.src_lang || '';
+    if (settingsDstLang) settingsDstLang.value = s.dst_lang || 'vi';
+  } catch (e) { console.error('Lỗi tải settings:', e); }
+}
+
+async function saveSettings() {
+  const payload = {
+    api_url: settingsApiUrl ? settingsApiUrl.value : 'http://localhost:8080',
+    model: settingsModel ? settingsModel.value : '',
+    src_lang: settingsSrcLang ? settingsSrcLang.value : '',
+    dst_lang: settingsDstLang ? settingsDstLang.value : 'vi',
+  };
+  try {
+    await fetch(`${API}/api/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) { console.error('Lỗi lưu settings:', e); }
+}
+
+if (btnOpenSettings) {
+  btnOpenSettings.addEventListener('click', async () => {
+    await loadSettings();
+    if (settingsTestResult) settingsTestResult.style.display = 'none';
+    if (settingsModal) settingsModal.style.display = 'flex';
+  });
+}
+
+if (btnCancelSettings) {
+  btnCancelSettings.addEventListener('click', () => {
+    if (settingsModal) settingsModal.style.display = 'none';
+  });
+}
+
+if (btnSaveSettings) {
+  btnSaveSettings.addEventListener('click', async () => {
+    await saveSettings();
+    if (settingsModal) settingsModal.style.display = 'none';
+  });
+}
+
+if (btnTestLlm) {
+  btnTestLlm.addEventListener('click', async () => {
+    const url = settingsApiUrl ? settingsApiUrl.value : 'http://localhost:8080';
+    const model = settingsModel ? settingsModel.value : '';
+    if (settingsTestResult) {
+      settingsTestResult.style.display = 'block';
+      settingsTestResult.textContent = 'Đang kiểm tra kết nối...';
+      settingsTestResult.style.color = '#94a3b8';
+    }
+    try {
+      const body = { messages: [{ role: 'user', content: 'Hi' }] };
+      if (model) body.model = model;
+      const res = await fetch(`${url.replace(/\/+$/, '')}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || '(no content)';
+      if (settingsTestResult) {
+        settingsTestResult.textContent = `✅ Kết nối thành công! Phản hồi: "${reply.slice(0, 80)}..."`;
+        settingsTestResult.style.color = '#10b981';
+      }
+      await saveSettings();
+    } catch (e) {
+      if (settingsTestResult) {
+        settingsTestResult.textContent = `❌ Lỗi: ${e.message}`;
+        settingsTestResult.style.color = '#fb7185';
+      }
+    }
+  });
+}
+
+// Translate subtitle
+window.translateSub = async function(idx) {
+  if (!currentVideoId) return alert('Vui lòng mở dự án trước.');
+  const sub = subtitles[idx];
+  if (!sub || !sub.text.trim()) return;
+
+  await loadSettings();
+  const src = settingsSrcLang ? settingsSrcLang.value : '';
+  const dst = settingsDstLang ? settingsDstLang.value : 'vi';
+
+  const textarea = document.querySelector(`.sub-item[data-index="${idx}"] textarea`);
+  const currentText = textarea ? textarea.value : sub.text;
+
+  // --- Smart check: init, re-translate on lang change, or toggle ---
+
+  // First time: save original + language
+  if (textarea && !textarea.dataset.original) {
+    textarea.dataset.original = currentText;
+    textarea.dataset.originalPerm = currentText;
+    textarea.dataset.originalSrc = src;
+    textarea.dataset.originalDst = dst;
+  }
+
+  const prevSrc = textarea.dataset.originalSrc || '';
+  const prevDst = textarea.dataset.originalDst || '';
+  const langChanged = prevSrc !== src || prevDst !== dst;
+
+  if (textarea && textarea.dataset.original && langChanged) {
+    // Language changed → restore permanent original, re-translate
+    textarea.dataset.original = textarea.dataset.originalPerm;
+    textarea.value = textarea.dataset.originalPerm;
+    textarea.dataset.originalSrc = src;
+    textarea.dataset.originalDst = dst;
+  } else if (textarea && textarea.dataset.original && textarea.value !== textarea.dataset.original) {
+    // Same lang, already translated → toggle
+    const temp = textarea.value;
+    textarea.value = textarea.dataset.original;
+    textarea.dataset.original = temp;
+    sub.text = textarea.value;
+    updateSubField({ target: textarea }, true);
+    return;
+  }
+
+  const textToTranslate = textarea.dataset.originalPerm || currentText;
+  const beforeText = textarea.value;
+
+  textarea.disabled = true;
+  textarea.value = 'Đang dịch...';
+
+  try {
+    const res = await fetch(`${API}/api/video/${currentVideoId}/translate-sub`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: textToTranslate, source_lang: src, target_lang: dst }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const translated = data.translated;
+
+    textarea.dataset.original = textToTranslate;
+    textarea.value = translated;
+    sub.text = translated;
+    updateSubField({ target: textarea }, true);
+
+    textarea.disabled = false;
+  } catch (err) {
+    console.error('Lỗi dịch:', err);
+    textarea.value = beforeText;
+    textarea.disabled = false;
+    alert('Dịch thất bại: ' + err.message);
+  }
+};
+
 // --- Init ---
 loadVideoList();
 setupTimelineEvents();
+loadSettings();

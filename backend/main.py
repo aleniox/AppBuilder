@@ -1292,6 +1292,86 @@ def _render_video_with_subtitles_and_voice(
         progress_callback(100)
 
 
+# ===== Settings & Translation =====
+SETTINGS_FILE = Path("settings.json")
+
+def load_settings():
+    if SETTINGS_FILE.exists():
+        try:
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {"api_url": "http://localhost:8080", "model": ""}
+
+def save_settings(s):
+    with db_lock:
+        try:
+            with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+                json.dump(s, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+
+@app.get("/api/settings")
+def get_settings():
+    return load_settings()
+
+@app.post("/api/settings")
+def update_settings(settings: dict):
+    current = load_settings()
+    current.update(settings)
+    save_settings(current)
+    return {"status": "ok"}
+
+class TranslateSubPayload(BaseModel):
+    text: str
+    source_lang: str = ""
+    target_lang: str = "vi"
+
+@app.post("/api/video/{video_id}/translate-sub")
+def translate_subtitle(video_id: str, payload: TranslateSubPayload):
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+
+    settings = load_settings()
+    api_url = settings.get("api_url", "http://localhost:8080")
+    model = settings.get("model", "")
+
+    if not api_url:
+        raise HTTPException(400, "Chưa cấu hình API URL trong Settings")
+
+    import httpx
+    source = payload.source_lang or "auto"
+    target = payload.target_lang or "vi"
+
+    prompt = f"Dịch văn bản sau từ '{source}' sang '{target}'. CHỈ trả về kết quả dịch, không giải thích gì thêm.\n\nVăn bản: {payload.text}"
+
+    messages = [{"role": "user", "content": prompt}]
+    body = {"messages": messages}
+    if model:
+        body["model"] = model
+
+    try:
+        resp = httpx.post(
+            f"{api_url.rstrip('/')}/v1/chat/completions",
+            json=body,
+            timeout=60
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        translated = result["choices"][0]["message"]["content"].strip()
+        # Clean up any lingering quotes/formatting
+        translated = translated.strip('"\'.,;: ')
+        return {"translated": translated}
+    except httpx.TimeoutException:
+        raise HTTPException(408, "LLM API timeout - vui lòng kiểm tra server")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"LLM API lỗi HTTP {e.response.status_code}: {e.response.text[:200]}")
+    except Exception as e:
+        raise HTTPException(500, f"Lỗi gọi LLM API: {str(e)}")
+
+
 # Mount frontend files after all API endpoints
 frontend_dir = Path(__file__).parent.parent / "frontend"
 if frontend_dir.exists():
