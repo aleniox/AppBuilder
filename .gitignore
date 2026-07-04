@@ -10,7 +10,9 @@ wheels/
 .venv
 uploads
 output
-modules
 *.mp3
 *.wav
 *.mp4
+Spark-*
+unsloth_*
+spark_tts_lora

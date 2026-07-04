@@ -12,6 +12,35 @@ dependencies = [
     "numpy>=2.5.0",
     "pydub==0.25.1",
     "python-multipart==0.0.6",
-    "transformers>=5.12.1",
+    "unsloth>=2026.6.9",
     "uvicorn==0.24.0",
+    "torch==2.11.0+cu130",
+    "torchaudio==2.11.0+cu130",
+    "torchvision==0.26.0+cu130",
+    "torchcodec==0.14.0+cu130",
+    "soundfile>=0.14.0",
+    "omegaconf>=2.3.1",
+    "einx>=0.4.3",
+    "einops>=0.8.2",
+    "soxr>=1.1.0",
+    "transformers>=4.56.2",
+]
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchaudio = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
+torchcodec = { index = "pytorch-cu130" }
+
+[tool.uv]
+link-mode = "copy"
+override-dependencies = [
+    "torch==2.11.0+cu130",
+    "torchaudio==2.11.0+cu130",
+    "torchvision==0.26.0+cu130",
+    "torchcodec==0.14.0+cu130",
 ]
