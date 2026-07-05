@@ -3,8 +3,6 @@ const API = 'http://localhost:8000';
 let currentVideoId = null;
 let subtitles = [];
 let subCounter = 0;
-let insertedClips = [];
-
 // --- DOM refs ---
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -188,6 +186,35 @@ async function deleteVideoProject(id, event) {
 }
 window.deleteVideoProject = deleteVideoProject;
 
+const videoLoadingOverlay = document.getElementById('video-loading-overlay');
+
+function resetVideoPlayer() {
+  try {
+    videoPlayer.pause();
+  } catch (e) {}
+  videoPlayer.removeAttribute('src');
+  videoPlayer.defaultPlaybackRate = 1.0;
+  videoPlayer.playbackRate = 1.0;
+}
+
+async function selectVideoWithRetry(id, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(`${API}/api/video/${id}`);
+      if (res.ok) {
+        await selectVideo(id);
+        return;
+      }
+      if (attempt === maxRetries) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (e) {
+      if (attempt === maxRetries) throw e;
+    }
+    await new Promise(r => setTimeout(r, 500 * attempt));
+  }
+}
+
 async function selectVideo(id) {
   currentVideoId = id;
   try {
@@ -196,8 +223,11 @@ async function selectVideo(id) {
       throw new Error(`Lỗi kết nối API (Status: ${res.status})`);
     }
     const video = await res.json();
-    
-    videoPlayer.src = `${API}/api/download/${video.filename}?t=${Date.now()}`;
+
+    if (videoLoadingOverlay) videoLoadingOverlay.style.display = 'flex';
+    resetVideoPlayer();
+    videoPlayer.src = `${API}/api/download/${video.filename}`;
+    videoPlayer.preload = 'metadata';
     videoPlayer.load();
 
     // Set active project name in workspace header
@@ -215,15 +245,28 @@ async function selectVideo(id) {
 
     subtitles = video.subtitles || [];
     subCounter = subtitles.length;
-    insertedClips = video.inserted_clips || [];
     
     loadSubtitles();
+    loadRefAudioStatus();
     if (videoSelect) videoSelect.value = id;
   } catch (err) {
     console.error("Lỗi mở dự án:", err);
     alert("Không thể tải thông tin dự án này. Chi tiết lỗi:\n" + err.message);
   }
 }
+
+videoPlayer.addEventListener('canplay', () => {
+  if (videoLoadingOverlay) videoLoadingOverlay.style.display = 'none';
+});
+videoPlayer.addEventListener('waiting', () => {
+  if (videoLoadingOverlay && videoPlayer.src) videoLoadingOverlay.style.display = 'flex';
+});
+videoPlayer.addEventListener('playing', () => {
+  if (videoLoadingOverlay) videoLoadingOverlay.style.display = 'none';
+});
+videoPlayer.addEventListener('error', (e) => {
+  if (videoLoadingOverlay) videoLoadingOverlay.style.display = 'none';
+});
 
 videoPlayer.addEventListener('timeupdate', () => {
   const currentTime = videoPlayer.currentTime;
@@ -682,7 +725,6 @@ if (btnBackToStart) {
     currentVideoId = null;
     subtitles = [];
     subCounter = 0;
-    insertedClips = [];
     if (fileInput) fileInput.value = '';
     if (workspaceScreen) workspaceScreen.style.display = 'none';
     if (startScreen) startScreen.style.display = 'flex';
@@ -692,10 +734,72 @@ if (btnBackToStart) {
 
 // Autosave when voice settings change
 if (voiceToggle) {
-  voiceToggle.addEventListener('change', () => saveSubtitlesToBackend());
+  voiceToggle.addEventListener('change', () => {
+    saveSubtitlesToBackend();
+    const refSection = document.querySelector('.ref-audio-section');
+    if (refSection) refSection.style.display = voiceToggle.checked ? '' : 'none';
+  });
 }
 if (voiceLang) {
   voiceLang.addEventListener('change', () => saveSubtitlesToBackend());
+}
+
+// --- Reference Audio Upload ---
+const refAudioInput = document.getElementById('ref-audio-input');
+const btnUploadRefAudio = document.getElementById('btn-upload-ref-audio');
+const refAudioStatus = document.getElementById('ref-audio-status');
+
+async function uploadRefAudio() {
+  if (!currentVideoId) return alert('Vui lòng mở một dự án trước.');
+  if (!refAudioInput.files.length) return alert('Vui lòng chọn file giọng mẫu.');
+
+  const file = refAudioInput.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  refAudioStatus.textContent = 'Đang tải lên giọng mẫu...';
+  refAudioStatus.className = 'ref-audio-status loading';
+
+  try {
+    const res = await fetch(`${API}/api/video/${currentVideoId}/ref-audio`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    refAudioStatus.textContent = `✅ Giọng mẫu: ${data.ref_audio}`;
+    refAudioStatus.className = 'ref-audio-status success';
+    refAudioInput.value = '';
+  } catch (err) {
+    refAudioStatus.textContent = `❌ Lỗi: ${err.message}`;
+    refAudioStatus.className = 'ref-audio-status error';
+  }
+}
+
+if (btnUploadRefAudio) {
+  btnUploadRefAudio.addEventListener('click', uploadRefAudio);
+}
+
+async function loadRefAudioStatus() {
+  if (!currentVideoId || !refAudioStatus) return;
+  try {
+    const res = await fetch(`${API}/api/video/${currentVideoId}`);
+    if (!res.ok) return;
+    const video = await res.json();
+    if (video.ref_audio_path) {
+      const name = video.ref_audio_path.split('/').pop() || video.ref_audio_path.split('\\').pop();
+      refAudioStatus.textContent = `✅ Giọng mẫu: ${name}`;
+      refAudioStatus.className = 'ref-audio-status success';
+    } else {
+      refAudioStatus.textContent = 'Chưa có giọng mẫu';
+      refAudioStatus.className = 'ref-audio-status';
+    }
+  } catch (e) {
+    console.error('Lỗi tải trạng thái giọng mẫu:', e);
+  }
 }
 
 // --- Keyboard shortcuts ---
@@ -724,30 +828,6 @@ function scrollToActiveSub(idx) {
   }
 }
 
-function updateTimelineClips() {
-  const container = document.getElementById('timeline-clips-container');
-  if (!container) return;
-  const duration = videoPlayer.duration || 0;
-  if (!duration || !insertedClips || !insertedClips.length) {
-    container.innerHTML = '';
-    return;
-  }
-
-  container.innerHTML = insertedClips.map((clip, idx) => {
-    const left = (clip.start / duration) * 100;
-    const width = (clip.duration / duration) * 100;
-    
-    return `
-      <div class="timeline-clip-block" 
-           style="left: ${left}%; width: ${width}%;" 
-           title="Clip video đã ghép (Bắt đầu: ${clip.start.toFixed(2)}s, Dài: ${clip.duration.toFixed(2)}s)"
-           onclick="openManageClipModal(${idx}); event.stopPropagation();">
-        <span>Clip ${idx + 1}</span>
-      </div>
-    `;
-  }).join('');
-}
-
 function updateTimelineBlocks() {
   const timelineSubsContainer = document.getElementById('timeline-subs-container');
   if (!timelineSubsContainer) return;
@@ -770,7 +850,7 @@ function updateTimelineBlocks() {
       <div class="timeline-sub-block" 
            style="left: ${left}%; width: ${width}%;" 
            title="${escHtml(sub.text)} (Âm thanh thực tế: ~${estAudioDur.toFixed(1)}s)"
-           onclick="jumpToSub(${idx}); event.stopPropagation();">
+           data-sub-index="${idx}">
         <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; pointer-events: none;">
           ${escHtml(sub.text)}
         </span>
@@ -780,7 +860,6 @@ function updateTimelineBlocks() {
     `;
   }).join('');
 
-  updateTimelineClips();
 }
 
 const visualTimeline = document.getElementById('visual-timeline');
@@ -808,6 +887,7 @@ function setupTimelineEvents() {
   let isDraggingTimeline = false;
 
   visualTimeline.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
     isDraggingTimeline = true;
     seekFromEvent(e);
   });
@@ -915,369 +995,6 @@ function addSubtitleAtTime(time, text) {
   const duration = 3.0; // default 3s subtitle duration
   const maxDur = (videoPlayer && videoPlayer.duration) ? videoPlayer.duration : (roundedStart + 3.0);
   const roundedEnd = Math.round(Math.min(roundedStart + duration, maxDur) * 100) / 100;
-  addSubtitle(roundedStart, roundedEnd, text);
-}
-
-// --- Insert Clip Modal Logic ---
-const btnInsertVideo = document.getElementById('btn-insert-video');
-const insertClipModal = document.getElementById('insert-clip-modal');
-const btnCancelInsert = document.getElementById('btn-cancel-insert');
-const btnSubmitInsert = document.getElementById('btn-submit-insert');
-const insertFileInput = document.getElementById('insert-file-input');
-const insertTimeInput = document.getElementById('insert-time-input');
-const mergeLoadingIndicator = document.getElementById('merge-loading-indicator');
-
-if (btnInsertVideo) {
-  console.log("btnInsertVideo found, binding click event listener.");
-  btnInsertVideo.addEventListener('click', () => {
-    console.log("btnInsertVideo clicked! currentVideoId =", currentVideoId);
-    if (!currentVideoId) {
-      alert("Vui lòng mở một dự án trước.");
-      return;
-    }
-    try {
-      videoPlayer.pause();
-    } catch(e) {
-      console.warn("Failed to pause video:", e);
-    }
-    if (insertTimeInput) {
-      insertTimeInput.value = videoPlayer.currentTime.toFixed(2);
-      console.log("Set insertTimeInput to", insertTimeInput.value);
-    }
-    if (insertClipModal) {
-      insertClipModal.style.display = 'flex';
-      console.log("Displayed insertClipModal. Element style display =", insertClipModal.style.display);
-    } else {
-      console.error("insertClipModal element not found in DOM!");
-    }
-  });
-} else {
-  console.error("btnInsertVideo element not found in DOM!");
-}
-
-if (btnCancelInsert) {
-  btnCancelInsert.addEventListener('click', () => {
-    if (insertClipModal) insertClipModal.style.display = 'none';
-    if (insertFileInput) insertFileInput.value = '';
-    if (mergeLoadingIndicator) mergeLoadingIndicator.style.display = 'none';
-    btnSubmitInsert.disabled = false;
-    btnCancelInsert.disabled = false;
-  });
-}
-
-window.submitVideoMerge = async function() {
-  if (!insertFileInput.files.length) {
-    return alert("Vui lòng chọn một file video để chèn.");
-  }
-  const file = insertFileInput.files[0];
-  const insertTime = parseFloat(insertTimeInput.value);
-  
-  if (isNaN(insertTime) || insertTime < 0) {
-    return alert("Thời điểm chèn không hợp lệ.");
-  }
-
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('insert_time', insertTime);
-
-  // Show loading state
-  const mergeStatusText = document.getElementById('merge-status-text');
-  const mergePercentage = document.getElementById('merge-percentage');
-  const mergeProgressFill = document.getElementById('merge-progress-fill');
-
-  if (mergeStatusText) mergeStatusText.textContent = "Đang tải clip lên...";
-  if (mergePercentage) mergePercentage.textContent = "0%";
-  if (mergeProgressFill) {
-    mergeProgressFill.style.width = "0%";
-    mergeProgressFill.style.background = ""; // Reset in case of prior errors
-  }
-  mergeLoadingIndicator.style.display = 'block';
-  btnSubmitInsert.disabled = true;
-  btnCancelInsert.disabled = true;
-
-  const xhr = new XMLHttpRequest();
-
-  // Track upload progress
-  xhr.upload.addEventListener('progress', (e) => {
-    if (e.lengthComputable) {
-      const percent = Math.round((e.loaded / e.total) * 100);
-      if (mergePercentage) mergePercentage.textContent = `${percent}%`;
-      if (mergeProgressFill) mergeProgressFill.style.width = `${percent}%`;
-      
-      if (percent === 100) {
-        if (mergeStatusText) mergeStatusText.textContent = "Đang xử lý ghép video & đồng bộ phụ đề...";
-      }
-    }
-  });
-
-  // Handle response
-  xhr.addEventListener('load', async () => {
-    if (xhr.status >= 200 && xhr.status < 300) {
-      try {
-        const resData = JSON.parse(xhr.responseText);
-        const taskId = resData.task_id;
-        
-        if (mergeStatusText) mergeStatusText.textContent = "Đang bắt đầu ghép video...";
-        
-        // Poll merge status
-        const pollInterval = setInterval(async () => {
-          try {
-            const statusRes = await fetch(`${API}/api/video/merge-status/${taskId}`);
-            if (!statusRes.ok) {
-              throw new Error(`Lỗi kết nối server (HTTP ${statusRes.status})`);
-            }
-            const data = await statusRes.json();
-            
-            if (data.status === "processing") {
-              if (mergeStatusText) mergeStatusText.textContent = data.status_text || "Đang xử lý...";
-              if (mergePercentage) mergePercentage.textContent = `${data.progress}%`;
-              if (mergeProgressFill) mergeProgressFill.style.width = `${data.progress}%`;
-            } else if (data.status === "completed") {
-              clearInterval(pollInterval);
-              if (mergePercentage) mergePercentage.textContent = "100%";
-              if (mergeProgressFill) mergeProgressFill.style.width = "100%";
-              
-              // Hide modal
-              insertClipModal.style.display = 'none';
-              insertFileInput.value = '';
-              mergeLoadingIndicator.style.display = 'none';
-              btnSubmitInsert.disabled = false;
-              btnCancelInsert.disabled = false;
-              
-              alert("Ghép video thành công! Dự án mới đã được khởi tạo.");
-              await loadVideoList();
-              selectVideo(data.output_id);
-            } else if (data.status === "failed") {
-              clearInterval(pollInterval);
-              throw new Error(data.error || "Gặp lỗi xử lý trên server");
-            }
-          } catch (pollErr) {
-            clearInterval(pollInterval);
-            alert("Ghép video thất bại: " + pollErr.message);
-            mergeLoadingIndicator.style.display = 'none';
-            btnSubmitInsert.disabled = false;
-            btnCancelInsert.disabled = false;
-            if (mergeStatusText) mergeStatusText.textContent = "Ghép video thất bại";
-            if (mergeProgressFill) {
-              mergeProgressFill.style.background = "#e94560";
-            }
-          }
-        }, 1000);
-        
-      } catch (jsonErr) {
-        console.error("Error parsing response:", jsonErr);
-        alert("Lỗi phản hồi từ server.");
-        btnSubmitInsert.disabled = false;
-        btnCancelInsert.disabled = false;
-      }
-    } else {
-      btnSubmitInsert.disabled = false;
-      btnCancelInsert.disabled = false;
-      let errorMsg = `HTTP ${xhr.status}`;
-      try {
-        const errData = JSON.parse(xhr.responseText);
-        errorMsg = errData.detail || errorMsg;
-      } catch(e) {}
-      
-      alert("Ghép video thất bại: " + errorMsg);
-      if (mergeStatusText) mergeStatusText.textContent = "Ghép video thất bại";
-      if (mergeProgressFill) {
-        mergeProgressFill.style.background = "#e94560"; // Red color for error
-      }
-    }
-  });
-
-  // Handle connection error
-  xhr.addEventListener('error', () => {
-    alert("Lỗi kết nối khi gửi yêu cầu ghép video.");
-    btnSubmitInsert.disabled = false;
-    btnCancelInsert.disabled = false;
-    if (mergeStatusText) mergeStatusText.textContent = "Lỗi kết nối";
-    if (mergeProgressFill) {
-      mergeProgressFill.style.background = "#e94560";
-    }
-  });
-
-  // Handle timeout error
-  xhr.timeout = 180000; // 3 minutes timeout for upload
-  xhr.addEventListener('timeout', () => {
-    alert("Yêu cầu tải video lên bị hết thời gian (timeout).");
-    btnSubmitInsert.disabled = false;
-    btnCancelInsert.disabled = false;
-    if (mergeStatusText) mergeStatusText.textContent = "Hết thời gian (Timeout)";
-    if (mergeProgressFill) {
-      mergeProgressFill.style.background = "#e94560";
-    }
-  });
-
-  xhr.open('POST', `${API}/api/video/${currentVideoId}/insert-clip`);
-  xhr.send(formData);
-};
-
-if (btnSubmitInsert) {
-  btnSubmitInsert.addEventListener('click', (e) => {
-    if (e) e.preventDefault();
-    submitVideoMerge();
-  });
-}
-
-// --- Manage Spliced Clips Logic ---
-let selectedClipIndex = null;
-
-window.openManageClipModal = function(idx) {
-  selectedClipIndex = idx;
-  if (!insertedClips || !insertedClips[idx]) return;
-  const clip = insertedClips[idx];
-
-  const infoText = document.getElementById('manage-clip-info');
-  const moveInput = document.getElementById('move-time-input');
-  const modal = document.getElementById('manage-clip-modal');
-
-  if (infoText) {
-    infoText.textContent = `Clip #${idx + 1} - Bắt đầu từ giây ${clip.start.toFixed(2)}s, thời lượng ${clip.duration.toFixed(2)}s.`;
-  }
-  if (moveInput) {
-    moveInput.value = clip.start.toFixed(2);
-  }
-  if (modal) {
-    modal.style.display = 'flex';
-  }
-};
-
-const manageClipModal = document.getElementById('manage-clip-modal');
-const btnCancelManage = document.getElementById('btn-cancel-manage');
-const btnDeleteClip = document.getElementById('btn-delete-clip');
-const btnSubmitMove = document.getElementById('btn-submit-move');
-const manageClipLoading = document.getElementById('manage-clip-loading');
-const manageClipStatusText = document.getElementById('manage-clip-status-text');
-
-if (btnCancelManage) {
-  btnCancelManage.addEventListener('click', () => {
-    if (manageClipModal) manageClipModal.style.display = 'none';
-    if (manageClipLoading) manageClipLoading.style.display = 'none';
-    if (btnDeleteClip) btnDeleteClip.disabled = false;
-    if (btnSubmitMove) btnSubmitMove.disabled = false;
-    if (btnCancelManage) btnCancelManage.disabled = false;
-  });
-}
-
-if (btnDeleteClip) {
-  btnDeleteClip.addEventListener('click', async () => {
-    if (selectedClipIndex === null) return;
-    if (!confirm("Bạn có chắc chắn muốn xóa đoạn video ghép này? Toàn bộ phụ đề đi kèm trong phân đoạn này cũng sẽ bị xóa và các phụ đề sau đó sẽ được dịch chuyển lùi lại.")) return;
-
-    // Release the video lock in Brave browser so Windows OS allows file deletion/overwriting
-    if (videoPlayer) {
-      videoPlayer.pause();
-      videoPlayer.removeAttribute('src');
-      videoPlayer.load();
-    }
-    // Wait 200ms to give Windows OS time to release the file handle
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    if (manageClipLoading) manageClipLoading.style.display = 'block';
-    if (manageClipStatusText) manageClipStatusText.textContent = "Đang xóa clip...";
-    btnDeleteClip.disabled = true;
-    btnSubmitMove.disabled = true;
-    btnCancelManage.disabled = true;
-
-    try {
-      const res = await fetch(`${API}/api/video/${currentVideoId}/delete-clip/${selectedClipIndex}`, {
-        method: 'POST'
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const outputId = data.output_id;
-      if (manageClipModal) manageClipModal.style.display = 'none';
-      if (manageClipLoading) manageClipLoading.style.display = 'none';
-      btnDeleteClip.disabled = false;
-      btnSubmitMove.disabled = false;
-      btnCancelManage.disabled = false;
-
-      alert("Xóa clip video thành công!");
-      await loadVideoList();
-      selectVideo(outputId);
-
-    } catch (err) {
-      console.error("Lỗi xóa clip:", err);
-      alert("Xóa clip thất bại: " + err.message);
-      if (manageClipLoading) manageClipLoading.style.display = 'none';
-      btnDeleteClip.disabled = false;
-      btnSubmitMove.disabled = false;
-      btnCancelManage.disabled = false;
-      
-      // Restore player state by reloading the video
-      await selectVideo(currentVideoId);
-    }
-  });
-}
-
-if (btnSubmitMove) {
-  btnSubmitMove.addEventListener('click', async () => {
-    if (selectedClipIndex === null) return;
-    const moveInput = document.getElementById('move-time-input');
-    const newStart = parseFloat(moveInput.value);
-    
-    if (isNaN(newStart) || newStart < 0) {
-      return alert("Thời điểm di chuyển không hợp lệ.");
-    }
-
-    // Release the video lock in Brave browser so Windows OS allows file deletion/overwriting
-    if (videoPlayer) {
-      videoPlayer.pause();
-      videoPlayer.removeAttribute('src');
-      videoPlayer.load();
-    }
-    // Wait 200ms to give Windows OS time to release the file handle
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    if (manageClipLoading) manageClipLoading.style.display = 'block';
-    if (manageClipStatusText) manageClipStatusText.textContent = "Đang di chuyển clip...";
-    btnDeleteClip.disabled = true;
-    btnSubmitMove.disabled = true;
-    btnCancelManage.disabled = true;
-
-    try {
-      const res = await fetch(`${API}/api/video/${currentVideoId}/move-clip/${selectedClipIndex}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_start: newStart })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const outputId = data.output_id;
-      if (manageClipModal) manageClipModal.style.display = 'none';
-      if (manageClipLoading) manageClipLoading.style.display = 'none';
-      btnDeleteClip.disabled = false;
-      btnSubmitMove.disabled = false;
-      btnCancelManage.disabled = false;
-
-      alert("Di chuyển clip video thành công!");
-      await loadVideoList();
-      selectVideo(outputId);
-
-    } catch (err) {
-      console.error("Lỗi di chuyển clip:", err);
-      alert("Di chuyển clip thất bại: " + err.message);
-      if (manageClipLoading) manageClipLoading.style.display = 'none';
-      btnDeleteClip.disabled = false;
-      btnSubmitMove.disabled = false;
-      btnCancelManage.disabled = false;
-      
-      // Restore player state by reloading the video
-      if (currentVideoId) await selectVideo(currentVideoId);
-    }
-  });
 }
 
 // ===== Settings & Translate =====

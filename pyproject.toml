@@ -24,6 +24,7 @@ dependencies = [
     "einops>=0.8.2",
     "soxr>=1.1.0",
     "transformers>=4.56.2",
+    "xformers>=0.0.35",
 ]
 [[tool.uv.index]]
 name = "pytorch-cu130"

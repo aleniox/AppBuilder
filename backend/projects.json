@@ -58,6 +58,61 @@
     "render_status": "completed",
     "render_progress": 100,
     "render_error": null,
-    "output": "output_3417ccd4.mp4"
+    "output": "output_3417ccd4.mp4",
+    "ref_audio_path": "ref_audio\\ref_3417ccd4.mp3"
+  },
+  "4282ae60": {
+    "id": "4282ae60",
+    "filename": "4282ae60.mp4",
+    "original_name": "2026-07-05 13-51-17.mp4",
+    "path": "uploads\\4282ae60.mp4",
+    "duration": 2.38
+  },
+  "7965925b": {
+    "id": "7965925b",
+    "filename": "7965925b.mp4",
+    "original_name": "ACPhoenix 2026-07-05 10-13-55.mp4",
+    "path": "uploads\\7965925b.mp4",
+    "duration": 696.57
+  },
+  "e6ad24d0": {
+    "id": "e6ad24d0",
+    "filename": "e6ad24d0.mp4",
+    "original_name": "ACPhoenix 2026-07-05 10-13-55_inserted.mp4",
+    "path": "uploads\\e6ad24d0.mp4",
+    "duration": 3302.19,
+    "subtitles": [],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [
+      {
+        "start": 696.57,
+        "duration": 2605.62
+      }
+    ]
+  },
+  "813851b4": {
+    "id": "813851b4",
+    "filename": "del_79ef0454.mp4",
+    "original_name": "ACPhoenix 2026-07-05 10-13-55_inserted_inserted_deleted_deleted.mp4",
+    "path": "uploads\\del_79ef0454.mp4",
+    "duration": 982.99,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 1.66,
+        "end": 7.66,
+        "text": "Xin chào các con vợ nhé, bây giờ chúng ta sẽ bắt đầu trận đấu",
+        "voice": "vi"
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi",
+    "inserted_clips": [],
+    "ref_audio_path": "ref_audio\\ref_813851b4.mp3",
+    "render_status": "completed",
+    "render_progress": 100,
+    "render_error": null,
+    "output": "output_813851b4.mp4"
   }
 }
