@@ -1366,3 +1366,38 @@ select:focus {
   display: block;
   margin-top: 4px;
 }
+
+/* TTS synthesize button per subtitle */
+.btn-tts {
+  min-width: 40px;
+  text-align: center;
+  transition: all 0.2s !important;
+}
+.btn-tts:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Play button — dimmed when no audio, green when has audio */
+.btn-play {
+  min-width: 40px;
+  text-align: center;
+  opacity: 0.35;
+  cursor: default;
+  transition: all 0.2s !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--text-muted) !important;
+}
+.btn-play.has-audio {
+  opacity: 1;
+  cursor: pointer;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #34d399 !important;
+}
+.btn-play.has-audio:hover {
+  background: rgba(16, 185, 129, 0.25) !important;
+  border-color: #10b981 !important;
+  color: #6ee7b7 !important;
+}

@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import uuid
 import json
 import shutil
@@ -82,6 +83,7 @@ class SubtitleItem(BaseModel):
     end: float
     text: str
     voice: str = "vi"
+    audio_path: Optional[str] = None
 
 
 class SubtitlesPayload(BaseModel):
@@ -152,8 +154,8 @@ async def upload_ref_audio(video_id: str, file: UploadFile = File(...)):
         f.write(content)
     video["ref_audio_path"] = str(ref_path)
     save_db(videos_db)
-    global _tts_engine
-    _tts_engine = None
+    # Update reference audio without reloading the model
+    _ensure_ref_audio(video_id)
     return {"status": "ok", "ref_audio": ref_filename}
 
 
@@ -162,11 +164,45 @@ def save_subtitles(video_id: str, payload: SubtitlesPayload):
     video = videos_db.get(video_id)
     if not video:
         raise HTTPException(404, "Video not found")
-    video["subtitles"] = [s.model_dump() for s in payload.subtitles]
+    old_subs = {s["id"]: s for s in video.get("subtitles", [])}
+    new_subs = []
+    for s in payload.subtitles:
+        sub = s.model_dump()
+        old = old_subs.get(sub["id"])
+        if old is not None and old.get("text") == sub["text"]:
+            sub["audio_path"] = old.get("audio_path")
+        else:
+            sub["audio_path"] = None
+        new_subs.append(sub)
+    video["subtitles"] = new_subs
     video["voice_enabled"] = payload.voice_enabled
     video["voice_lang"] = payload.voice_lang
     save_db(videos_db)
     return {"status": "ok", "count": len(payload.subtitles)}
+
+
+@app.post("/api/video/{video_id}/subtitle/{sub_index}/synthesize")
+def synthesize_subtitle(video_id: str, sub_index: int):
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+    subs = video.get("subtitles", [])
+    if sub_index < 0 or sub_index >= len(subs):
+        raise HTTPException(404, "Subtitle not found")
+    sub = subs[sub_index]
+    text = sub.get("text", "").strip()
+    if not text:
+        raise HTTPException(400, "Subtitle text is empty")
+    engine = _ensure_ref_audio(video_id)
+    import soundfile as sf
+    wav = engine.synthesize(text)
+    if wav.size == 0:
+        raise HTTPException(500, "TTS returned empty audio")
+    audio_filename = f"sub_audio_{video_id}_{sub['id']}.wav"
+    sf.write(str(OUTPUT_DIR / audio_filename), wav, 16000)
+    sub["audio_path"] = audio_filename
+    save_db(videos_db)
+    return {"status": "ok", "audio_path": audio_filename}
 
 
 @app.get("/api/video/{video_id}/render-status")
@@ -298,8 +334,17 @@ def download_file(filename: str, request: Request, range: Optional[str] = Header
     if if_none_match and if_none_match.strip('" ') == etag.strip('" '):
         return Response(status_code=304)
 
+    _MIME_MAP = {
+        ".mp4": "video/mp4", ".webm": "video/webm", ".avi": "video/x-msvideo",
+        ".mov": "video/quicktime", ".mkv": "video/x-matroska",
+        ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
+        ".m4a": "audio/mp4", ".aac": "audio/aac", ".flac": "audio/flac",
+    }
+    ext = Path(filename).suffix.lower()
+    content_type = _MIME_MAP.get(ext, "application/octet-stream")
+
     # Range requests are essential for video streaming (seeking and loading in Chrome/Safari)
-    if range and filename.lower().endswith((".mp4", ".webm", ".avi", ".mov", ".mkv", ".mp3", ".wav")):
+    if range and filename.lower().endswith((".mp4", ".webm", ".avi", ".mov", ".mkv", ".mp3", ".wav", ".ogg", ".m4a")):
         range_str = range.replace("bytes=", "")
         try:
             start_str, end_str = range_str.split("-")
@@ -333,13 +378,13 @@ def download_file(filename: str, request: Request, range: Optional[str] = Header
             "Content-Range": f"bytes {start}-{end}/{file_size}",
             "Accept-Ranges": "bytes",
             "Content-Length": str(end - start + 1),
-            "Content-Type": "video/mp4" if filename.lower().endswith(".mp4") else "application/octet-stream",
+            "Content-Type": content_type,
             "ETag": etag,
             "Cache-Control": "public, max-age=31536000, immutable",
         }
         return StreamingResponse(file_generator(), status_code=206, headers=headers)
 
-    return FileResponse(str(filepath), filename=filename, headers={
+    return FileResponse(str(filepath), filename=filename, media_type=content_type, headers={
         "ETag": etag,
         "Cache-Control": "public, max-age=31536000, immutable",
     })
@@ -368,21 +413,68 @@ def delete_video(video_id: str):
 
 
 _tts_engine = None
+_TTS_LORA_PATH = r"F:\WebEdit\video-editor\modules\spark_tts_lora"
+_TTS_IDLE_TIMEOUT = 300  # seconds before unloading model from GPU
+_tts_last_used = 0.0
+_TTS_LOCK = threading.Lock()
 
-def _get_tts_engine(video_id: str):
-    global _tts_engine
-    if _tts_engine is not None:
-        return _tts_engine
-    from sparktts_infer import get_engine
-    video = videos_db.get(video_id, {})
-    ref_audio = video.get("ref_audio_path")
-    # lora_path = video.get("lora_path")
-    _tts_engine = get_engine(ref_audio=ref_audio, lora_path=r"F:\WebEdit\video-editor\modules\spark_tts_lora")
-    return _tts_engine
+def _init_tts_engine():
+    global _tts_engine, _tts_last_used
+    with _TTS_LOCK:
+        if _tts_engine is not None:
+            return
+        from sparktts_infer import get_engine
+        print("[TTS] Pre-loading model (LLM + audio tokenizer)...")
+        _tts_engine = get_engine(lora_path=_TTS_LORA_PATH)
+        _tts_last_used = time.time()
+        print("[TTS] Model loaded.")
+
+def _ensure_ref_audio(video_id: str = None):
+    global _tts_engine, _tts_last_used
+    with _TTS_LOCK:
+        if _tts_engine is None:
+            from sparktts_infer import get_engine
+            print("[TTS] Loading model...")
+            _tts_engine = get_engine(lora_path=_TTS_LORA_PATH)
+        _tts_last_used = time.time()
+        engine = _tts_engine
+    if video_id:
+        video = videos_db.get(video_id, {})
+        ref_audio = video.get("ref_audio_path")
+        if ref_audio and os.path.isfile(ref_audio):
+            engine.load_reference(ref_audio)
+    return engine
+
+def _tts_sleep():
+    global _tts_engine, _tts_last_used
+    with _TTS_LOCK:
+        if _tts_engine is None:
+            return
+        print("[TTS] Unloading model from GPU (idle timeout)...")
+        del _tts_engine
+        _tts_engine = None
+        _tts_last_used = 0.0
+        import gc
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+        print("[TTS] Model unloaded, VRAM freed.")
+
+def _tts_sleep_monitor():
+    global _tts_engine, _tts_last_used
+    while True:
+        time.sleep(30)
+        if _tts_engine is not None and time.time() - _tts_last_used > _TTS_IDLE_TIMEOUT:
+            _tts_sleep()
 
 
 def _generate_voice_only(subtitles: list, output_path: str, lang: str = None, video_duration: float = 60.0, video_id: str = None):
     from pydub import AudioSegment
+    import soundfile as sf
 
     if not subtitles:
         raise Exception("No subtitles to generate voice")
@@ -391,25 +483,40 @@ def _generate_voice_only(subtitles: list, output_path: str, lang: str = None, vi
     final = AudioSegment.silent(duration=total_duration_ms)
     sr = 16000
 
-    engine = _get_tts_engine(video_id)
+    engine = _ensure_ref_audio(video_id)
 
     for i, sub in enumerate(subtitles):
         text = sub["text"].strip()
         if not text:
             continue
 
-        wav = engine.synthesize(text)
-        if wav.size == 0:
-            continue
-
-        audio_file = f"__temp_sparktts_{i}.wav"
-        import soundfile as sf
-        sf.write(audio_file, wav, sr)
-        seg = AudioSegment.from_wav(audio_file)
-        os.remove(audio_file)
+        # Use pre-generated audio if available
+        audio_fn = sub.get("audio_path")
+        if audio_fn:
+            audio_full = str(OUTPUT_DIR / audio_fn)
+        else:
+            audio_full = None
+        if audio_full and os.path.isfile(audio_full):
+            seg = AudioSegment.from_file(audio_full)
+        else:
+            wav = engine.synthesize(text)
+            if wav.size == 0:
+                continue
+            temp_file = f"__temp_sparktts_{video_id}_{i}.wav"
+            sf.write(temp_file, wav, sr)
+            seg = AudioSegment.from_wav(temp_file)
+            os.remove(temp_file)
+            # Save audio for future reuse
+            audio_fn = f"sub_audio_{video_id}_{sub['id']}.wav"
+            sf.write(str(OUTPUT_DIR / audio_fn), wav, sr)
+            sub["audio_path"] = audio_fn
 
         start_ms = int(sub["start"] * 1000)
         final = final.overlay(seg, position=start_ms)
+
+    # Persist updated audio_path info
+    if video_id and video_id in videos_db:
+        save_db(videos_db)
 
     final.export(output_path, format="mp3")
 
@@ -640,6 +747,15 @@ def translate_subtitle(video_id: str, payload: TranslateSubPayload):
     except Exception as e:
         raise HTTPException(500, f"Lỗi gọi LLM API: {str(e)}")
 
+
+# Pre-load TTS model at startup so the first request is fast
+@app.on_event("startup")
+async def _preload_tts():
+    _init_tts_engine()
+    # Start idle monitor thread (daemon so it dies with the server)
+    t = threading.Thread(target=_tts_sleep_monitor, daemon=True)
+    t.start()
+    print(f"[TTS] Idle monitor started (timeout={_TTS_IDLE_TIMEOUT}s)")
 
 # Mount frontend files after all API endpoints
 frontend_dir = Path(__file__).parent.parent / "frontend"

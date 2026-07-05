@@ -430,6 +430,43 @@ function deleteSub(idx) {
   saveSubtitlesToBackend();
 }
 
+async function synthesizeSubAudio(idx) {
+  const sub = subtitles[idx];
+  if (!sub || !sub.text.trim()) return alert('Phụ đề trống, không thể chuyển giọng.');
+  const btn = document.getElementById(`btn-tts-${idx}`);
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  try {
+    const res = await fetch(`${API}/api/video/${currentVideoId}/subtitle/${idx}/synthesize`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    sub.audio_path = data.audio_path;
+    btn.textContent = '🔊';
+    const playBtn = document.getElementById(`btn-play-${idx}`);
+    if (playBtn) {
+      playBtn.disabled = false;
+      playBtn.classList.add('has-audio');
+    }
+  } catch (err) {
+    console.error('Lỗi TTS:', err);
+    alert('Chuyển giọng thất bại: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function playSubAudio(idx) {
+  const sub = subtitles[idx];
+  if (!sub || !sub.audio_path) return;
+  const audioUrl = `${API}/api/download/${sub.audio_path}?t=${Date.now()}`;
+  const audio = new Audio(audioUrl);
+  audio.play().catch(e => alert('Không thể phát audio: ' + e.message));
+}
+
 function loadSubtitles() {
   subtitleList.innerHTML = subtitles.map((sub, idx) => `
     <div class="sub-item" data-index="${idx}">
@@ -444,6 +481,8 @@ function loadSubtitles() {
       </div>
       <div class="sub-actions">
         <button onclick="jumpToSub(${idx})" title="Nhảy tới">⏩</button>
+        <button id="btn-tts-${idx}" onclick="synthesizeSubAudio(${idx})" title="Chuyển giọng nói" class="btn-tts">🔊</button>
+        <button id="btn-play-${idx}" onclick="playSubAudio(${idx})" title="Nghe thử giọng" class="btn-play ${sub.audio_path ? 'has-audio' : ''}" ${sub.audio_path ? '' : 'disabled'}>▶️</button>
         <button onclick="translateSub(${idx})" title="Dịch phụ đề">🌐</button>
         <button onclick="deleteSub(${idx})" title="Xóa">🗑</button>
       </div>
