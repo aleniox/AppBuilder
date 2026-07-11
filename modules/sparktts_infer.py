@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from datetime import datetime
 SPARKTTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Spark-TTS")
 if os.path.isdir(SPARKTTS_DIR):
     sys.path.insert(0, SPARKTTS_DIR)
@@ -94,6 +95,9 @@ def load_reference_audio(audio_path, audio_tokenizer):
     sem_ids, glo_ids = audio_tokenizer.model.tokenize({
         "wav": wav_t, "ref_wav": ref_t, "feat": feat,
     })
+    del wav_t, ref_t, feat
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     return glo_ids, sem_ids
 
 
@@ -154,20 +158,23 @@ def generate_speech(
     inputs = tokenizer(
         [prompt], return_tensors="pt", padding=True, truncation=True
     ).to(device)
-    input_ids = inputs.input_ids
-    attention_mask = inputs.attention_mask
+    prompt_len = inputs.input_ids.shape[1]
+    max_len = prompt_len + max_new_audio_tokens
+    ids_buf = torch.zeros((1, max_len), dtype=torch.long, device=device)
+    mask_buf = torch.zeros((1, max_len), dtype=torch.long, device=device)
+    ids_buf[:, :prompt_len] = inputs.input_ids
+    mask_buf[:, :prompt_len] = inputs.attention_mask
+    pos = prompt_len
     for step in tqdm(range(max_new_audio_tokens), desc="Generating tokens", leave=False, disable=None):
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        outputs = model(input_ids=ids_buf[:, :pos], attention_mask=mask_buf[:, :pos])
         logits = outputs.logits[0, -1, :]
-        next_token = sample_logits(logits, temperature, top_k, top_p)
-        next_id = next_token.item()
-        input_ids = torch.cat([input_ids, next_token.unsqueeze(0)], dim=1)
-        attention_mask = torch.cat(
-            [attention_mask, torch.ones((1, 1), device=device)], dim=1
-        )
+        next_id = sample_logits(logits, temperature, top_k, top_p).item()
+        ids_buf[0, pos] = next_id
+        mask_buf[0, pos] = 1
+        pos += 1
         if next_id == eos_token_id:
             break
-    generated_ids = input_ids[:, inputs.input_ids.shape[1]:]
+    generated_ids = ids_buf[:, prompt_len:pos]
     predicts_text = tokenizer.batch_decode(
         generated_ids, skip_special_tokens=False
     )[0]
@@ -196,6 +203,15 @@ def generate_speech(
     return wav_np
 
 
+def _make_output_dir(text, base_dir="outputs"):
+    date_str = datetime.now().strftime("%Y%m%d")
+    words = text.strip().split()[:5]
+    safe = re.sub(r'[^\w-]', '', "_".join(words))[:60]
+    out = os.path.join(base_dir, f"{date_str}_{safe}")
+    os.makedirs(out, exist_ok=True)
+    return out
+
+
 class SparkTTSEngine:
     def __init__(
         self,
@@ -218,6 +234,7 @@ class SparkTTSEngine:
             max_seq_length=2048,
             load_in_4bit=False,
             full_finetuning=False,
+            load_in_16bit=True
         )
         if lora_path and os.path.isdir(lora_path):
             self.model = PeftModel.from_pretrained(self.model, lora_path)
@@ -246,6 +263,7 @@ class SparkTTSEngine:
         else:
             glo_ids = self._ref_glo_ids
         chunks = split_text(text, max_chunk_chars)
+        
         if len(chunks) <= 1:
             return generate_speech(
                 text, self.model, self.tokenizer, self.audio_tokenizer,
@@ -269,6 +287,8 @@ class SparkTTSEngine:
             )
             if wav.size > 0:
                 parts.append(wav)
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         return np.concatenate(parts) if parts else np.array([], dtype=np.float32)
 
     def synthesize_to_file(
@@ -287,6 +307,57 @@ class SparkTTSEngine:
             sf.write(output_path, wav, sr)
             return output_path
         return None
+
+    def synthesize_to_folder(
+        self,
+        text: str,
+        ref_audio: str = None,
+        temperature: float = 0.8,
+        top_k: int = 50,
+        top_p: float = 1.0,
+        max_tokens: int = 3000,
+        max_chunk_chars: int = 200,
+        base_dir: str = "outputs",
+    ) -> str:
+        out_dir = _make_output_dir(text, base_dir)
+        sr = self.audio_tokenizer.config.get("sample_rate", 16000)
+
+        if ref_audio:
+            glo_ids, _ = load_reference_audio(ref_audio, self.audio_tokenizer)
+        else:
+            glo_ids = self._ref_glo_ids
+
+        chunks = split_text(text, max_chunk_chars)
+
+        if len(chunks) <= 1:
+            wav = generate_speech(
+                text, self.model, self.tokenizer, self.audio_tokenizer,
+                ref_glo_ids=glo_ids,
+                temperature=temperature, top_k=top_k, top_p=top_p,
+                max_new_audio_tokens=max_tokens, device=self.device,
+            )
+            if wav.size > 0:
+                sf.write(os.path.join(out_dir, "chunk_001.wav"), wav, sr)
+                sf.write(os.path.join(out_dir, "full.wav"), wav, sr)
+            return out_dir
+
+        parts = []
+        for i, chunk in enumerate(chunks, 1):
+            wav = generate_speech(
+                chunk, self.model, self.tokenizer, self.audio_tokenizer,
+                ref_glo_ids=glo_ids,
+                temperature=temperature, top_k=top_k, top_p=top_p,
+                max_new_audio_tokens=max_tokens, device=self.device,
+            )
+            if wav.size > 0:
+                sf.write(os.path.join(out_dir, f"chunk_{i:03d}.wav"), wav, sr)
+                parts.append(wav)
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        if parts:
+            sf.write(os.path.join(out_dir, "full.wav"), np.concatenate(parts), sr)
+        return out_dir
 
 
 _engine_instance = None
@@ -314,9 +385,14 @@ def synthesize_text(
     text: str,
     ref_audio: str = None,
     output_path: str = None,
+    output_dir: str = None,
     **kwargs,
-) -> np.ndarray:
+) -> str | np.ndarray:
     engine = get_engine(ref_audio=ref_audio)
+    if output_dir:
+        return engine.synthesize_to_folder(
+            text, ref_audio=ref_audio, base_dir=output_dir, **kwargs
+        )
     if output_path:
         return engine.synthesize_to_file(text, output_path, ref_audio=ref_audio, **kwargs)
     return engine.synthesize(text, ref_audio=ref_audio, **kwargs)
