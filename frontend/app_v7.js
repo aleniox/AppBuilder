@@ -1387,7 +1387,1244 @@ btnTtsGenerate.addEventListener('click', async () => {
   }
 });
 
+// ==========================================================================
+// MUSIC VIDEO TAB
+// ==========================================================================
+const navMusic = document.getElementById('nav-music');
+const musicScreen = document.getElementById('music-screen');
+
+const musicImageZone = document.getElementById('music-image-zone');
+const musicImageInput = document.getElementById('music-image-input');
+const musicThumbnails = document.getElementById('music-thumbnails');
+const musicAudioZone = document.getElementById('music-audio-zone');
+const musicAudioInput = document.getElementById('music-audio-input');
+const musicAudioInfo = document.getElementById('music-audio-info');
+const musicAudioName = document.getElementById('music-audio-name');
+const musicAudioPlayer = document.getElementById('music-audio-player');
+const musicWaveGrid = document.getElementById('music-wave-grid');
+const musicCanvas = document.getElementById('music-canvas');
+const musicHint = document.getElementById('music-hint');
+const btnMusicPlay = document.getElementById('btn-music-play');
+const btnMusicPlayText = document.getElementById('btn-music-play-text');
+const btnMusicExport = document.getElementById('btn-music-export');
+const btnMusicReset = document.getElementById('btn-music-reset');
+const musicExportProgress = document.getElementById('music-export-progress');
+const musicExportText = document.getElementById('music-export-text');
+const musicExportFill = document.getElementById('music-export-fill');
+
+const musicState = {
+  images: [],
+  audioFile: null,
+  audioUrl: null,
+  audioCtx: null,
+  analyser: null,
+  source: null,
+  gainNode: null,
+  audioElement: null,
+  freqArray: null,
+  timeArray: null,
+  styleId: 0,
+  isPlaying: false,
+  isRecording: false,
+  animFrameId: null,
+  mediaRecorder: null,
+  recordedChunks: [],
+  canvasReady: false,
+  currentImageIdx: 0,
+  imageTransition: 0,
+  cachedImages: [],
+  waveRect: { x: 0, y: 0.5, w: 1, h: 0.5 },
+  isDraggingWave: false,
+  isResizingWave: false,
+  resizeHandle: null,
+  dragStartX: 0,
+  dragStartY: 0,
+  dragStartRect: null
+};
+
+const POSTCARD_COLORS = {
+  cream: '#FDF6E3', ivory: '#F5F0E8', sepia: '#8B7355',
+  terracotta: '#E07A5F', dustyRose: '#DBA5A0', teal: '#3D5A80',
+  navy: '#1B2838', mustard: '#E6B956', sage: '#81A691',
+  peach: '#F4A261', blush: '#F4D0C5', sunset: '#2D1B69',
+};
+
+const WAVE_STYLES = [
+  { id: 0, name: 'Vintage Bars', icon: 'vbars' },
+  { id: 1, name: 'Signature Line', icon: 'sig' },
+  { id: 2, name: 'Satin Ribbon', icon: 'ribbon' },
+  { id: 3, name: 'Postmark', icon: 'stamp' },
+  { id: 4, name: 'Neon Retro', icon: 'neon' },
+  { id: 5, name: 'Confetti', icon: 'confetti' },
+  { id: 6, name: 'Sunset', icon: 'sunset' },
+  { id: 7, name: 'Ocean Wave', icon: 'ocean' },
+  { id: 8, name: 'Circular Orbit', icon: 'orbit' },
+  { id: 9, name: 'Matrix Drops', icon: 'matrix' },
+  { id: 10, name: 'Cyber Polygon', icon: 'polygon' },
+  { id: 11, name: '3D Blocks', icon: 'block3d' },
+];
+
+// --- Tab switching ---
+function showMusicScreen() {
+  navMusic.classList.add('active');
+  navVideoEditor.classList.remove('active');
+  navTts.classList.remove('active');
+  startScreen.style.display = 'none';
+  workspaceScreen.style.display = 'none';
+  ttsScreen.style.display = 'none';
+  musicScreen.style.display = '';
+  if (!musicState.canvasReady) {
+    resizeMusicCanvas();
+    musicState.canvasReady = true;
+  }
+  renderWaveStyles();
+  renderMusicThumbnails();
+}
+
+// Update existing show functions to hide music screen
+const origShowVideoEditor = showVideoEditorScreen;
+showVideoEditorScreen = function() {
+  navVideoEditor.classList.add('active');
+  navTts.classList.remove('active');
+  navMusic.classList.remove('active');
+  ttsScreen.style.display = 'none';
+  musicScreen.style.display = 'none';
+  startScreen.style.display = '';
+  workspaceScreen.style.display = 'none';
+};
+
+const origShowTTS = showTTSScreen;
+showTTSScreen = function() {
+  navTts.classList.add('active');
+  navVideoEditor.classList.remove('active');
+  navMusic.classList.remove('active');
+  startScreen.style.display = 'none';
+  workspaceScreen.style.display = 'none';
+  musicScreen.style.display = 'none';
+  ttsScreen.style.display = '';
+};
+
+navMusic.addEventListener('click', showMusicScreen);
+
+function resizeMusicCanvas() {
+  const rect = musicCanvas.parentElement.getBoundingClientRect();
+  const w = Math.floor(rect.width * 2);
+  const h = Math.floor(w / 16 * 9);
+  musicCanvas.width = w;
+  musicCanvas.height = h;
+}
+
+// --- Wave style selector ---
+function renderWaveStyles() {
+  musicWaveGrid.innerHTML = WAVE_STYLES.map(s => {
+    let icon = '';
+    switch (s.icon) {
+      case 'vbars':
+        const hs = [55, 85, 40, 75, 45];
+        icon = hs.map(h => `<span style="height:${h}%;background:#E07A5F;border-radius:2px 2px 0 0"></span>`).join('');
+        break;
+      case 'sig':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><path d="M0 24 Q10 14 20 20 T40 16 T60 18" stroke="#8B7355" fill="none" stroke-width="2" stroke-linecap="round"/></svg>';
+        break;
+      case 'ribbon':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><path d="M0 18 Q10 8 20 16 T40 10 T60 18" stroke="#DBA5A0" fill="#F4D0C5" stroke-width="1"/><path d="M0 18 Q10 28 20 20 T40 26 T60 18" stroke="#E07A5F" fill="#F4D0C5" stroke-width="1"/></svg>';
+        break;
+      case 'stamp':
+        icon = '<svg viewBox="0 0 36 36" style="width:100%;height:100%"><circle cx="18" cy="18" r="12" stroke="#8B7355" fill="none" stroke-width="2" stroke-dasharray="3 3"/><circle cx="18" cy="18" r="7" stroke="#3D5A80" fill="none" stroke-width="1.5"/><circle cx="18" cy="18" r="2" fill="#1B2838"/></svg>';
+        break;
+      case 'neon':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><line x1="4" y1="30" x2="4" y2="20" stroke="#F4A261" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="30" x2="12" y2="6" stroke="#E07A5F" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="30" x2="20" y2="14" stroke="#F4A261" stroke-width="2" stroke-linecap="round"/><line x1="28" y1="30" x2="28" y2="4" stroke="#E07A5F" stroke-width="2" stroke-linecap="round"/><line x1="36" y1="30" x2="36" y2="10" stroke="#F4A261" stroke-width="2" stroke-linecap="round"/><line x1="44" y1="30" x2="44" y2="16" stroke="#E07A5F" stroke-width="2" stroke-linecap="round"/><line x1="52" y1="30" x2="52" y2="8" stroke="#F4A261" stroke-width="2" stroke-linecap="round"/></svg>';
+        break;
+      case 'confetti':
+        let dots = '';
+        for (let i = 0; i < 10; i++) {
+          const x = 3 + i * 6, y = 8 + Math.sin(i * 1.8) * 10;
+          const colors = ['#E07A5F','#E6B956','#DBA5A0','#81A691','#F4A261'];
+          dots += `<circle cx="${x}" cy="${y + 8}" r="${1.5 + (i % 3) * 0.5}" fill="${colors[i % 5]}"/>`;
+        }
+        icon = `<svg viewBox="0 0 60 36" style="width:100%;height:100%">${dots}</svg>`;
+        break;
+      case 'sunset':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><path d="M0 30 Q10 14 20 22 Q30 8 40 20 Q50 12 60 24 L60 36 L0 36Z" fill="#E07A5F"/><circle cx="45" cy="14" r="4" fill="#FEF08A"/></svg>';
+        break;
+      case 'ocean':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><path d="M0 24 Q15 18 30 24 Q45 30 60 24" stroke="#3D5A80" fill="none" stroke-width="2"/><path d="M0 28 Q15 22 30 28 Q45 34 60 28" stroke="#DBA5A0" fill="none" stroke-width="1.5"/></svg>';
+        break;
+      case 'orbit':
+        icon = '<svg viewBox="0 0 36 36" style="width:100%;height:100%"><circle cx="18" cy="18" r="10" stroke="#F4A261" fill="none" stroke-width="2" stroke-dasharray="2 4"/><circle cx="18" cy="18" r="5" fill="#E07A5F"/></svg>';
+        break;
+      case 'matrix':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><line x1="10" y1="4" x2="10" y2="16" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><line x1="25" y1="10" x2="25" y2="30" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><line x1="40" y1="2" x2="40" y2="20" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><line x1="50" y1="15" x2="50" y2="32" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>';
+        break;
+      case 'polygon':
+        icon = '<svg viewBox="0 0 36 36" style="width:100%;height:100%"><polygon points="18,4 32,14 26,30 10,30 4,14" stroke="#06b6d4" fill="none" stroke-width="2"/><polygon points="18,8 28,15 24,26 12,26 8,15" stroke="#d946ef" fill="rgba(217,70,239,0.3)" stroke-width="1"/></svg>';
+        break;
+      case 'block3d':
+        icon = '<svg viewBox="0 0 60 36" style="width:100%;height:100%"><path d="M10,25 L20,25 L25,20 L15,20 Z" fill="#F4A261"/><path d="M20,25 L20,15 L25,10 L25,20 Z" fill="#E07A5F"/><rect x="10" y="15" width="10" height="10" fill="#E6B956"/><path d="M30,25 L40,25 L45,20 L35,20 Z" fill="#4ade80"/><path d="M40,25 L40,8 L45,3 L45,20 Z" fill="#16a34a"/><rect x="30" y="8" width="10" height="17" fill="#22c55e"/></svg>';
+        break;
+    }
+    return `
+      <div class="wave-style-card ${s.id === musicState.styleId ? 'active' : ''}" data-style="${s.id}">
+        <div class="wave-icon">${icon}</div>
+        <div class="wave-label">${s.name}</div>
+      </div>
+    `;
+  }).join('');
+  musicWaveGrid.querySelectorAll('.wave-style-card').forEach(el => {
+    el.addEventListener('click', () => {
+      musicWaveGrid.querySelectorAll('.wave-style-card').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      musicState.styleId = parseInt(el.dataset.style);
+    });
+  });
+}
+
+// --- Image Management ---
+const musicCanvasWrapper = document.querySelector('.music-canvas-wrapper');
+musicCanvasWrapper.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  musicCanvasWrapper.classList.add('dragover');
+});
+musicCanvasWrapper.addEventListener('dragleave', () => {
+  musicCanvasWrapper.classList.remove('dragover');
+});
+musicCanvasWrapper.addEventListener('drop', (e) => {
+  e.preventDefault();
+  musicCanvasWrapper.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    const images = [];
+    let audioFile = null;
+    for (let i = 0; i < e.dataTransfer.files.length; i++) {
+      const f = e.dataTransfer.files[i];
+      if (f.type.startsWith('image/')) images.push(f);
+      if (f.type.startsWith('audio/')) audioFile = f;
+    }
+    if (images.length > 0) addMusicImages(images);
+    if (audioFile) loadMusicAudio(audioFile);
+  }
+});
+
+musicImageZone.addEventListener('click', () => musicImageInput.click());
+musicImageZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  musicImageZone.classList.add('dragover');
+});
+musicImageZone.addEventListener('dragleave', () => {
+  musicImageZone.classList.remove('dragover');
+});
+musicImageZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  musicImageZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    addMusicImages(e.dataTransfer.files);
+  }
+});
+musicImageInput.addEventListener('change', () => {
+  if (musicImageInput.files.length) {
+    addMusicImages(musicImageInput.files);
+    musicImageInput.value = '';
+  }
+});
+
+function addMusicImages(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = url;
+    musicState.images.push({ file, url, name: file.name });
+    musicState.cachedImages.push(img);
+  }
+  renderMusicThumbnails();
+  updateMusicButtons();
+}
+
+function removeMusicImage(idx) {
+  URL.revokeObjectURL(musicState.images[idx].url);
+  musicState.images.splice(idx, 1);
+  musicState.cachedImages.splice(idx, 1);
+  renderMusicThumbnails();
+  updateMusicButtons();
+}
+
+function renderMusicThumbnails() {
+  if (!musicState.images.length) {
+    musicThumbnails.style.display = 'none';
+    return;
+  }
+  musicThumbnails.style.display = 'flex';
+  musicThumbnails.innerHTML = musicState.images.map((img, i) => `
+    <div class="music-thumb-item" draggable="true" data-idx="${i}">
+      <img src="${img.url}" alt="${img.name}">
+      <button class="thumb-del" data-idx="${i}">✕</button>
+    </div>
+  `).join('');
+
+  musicThumbnails.querySelectorAll('.thumb-del').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeMusicImage(parseInt(btn.dataset.idx));
+    });
+  });
+
+  // Basic drag reorder
+  let dragSrc = null;
+  musicThumbnails.querySelectorAll('.music-thumb-item').forEach(el => {
+    el.addEventListener('dragstart', (e) => {
+      dragSrc = parseInt(el.dataset.idx);
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('dragover', (e) => e.preventDefault());
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const to = parseInt(el.dataset.idx);
+      if (dragSrc !== null && dragSrc !== to) {
+        const [item] = musicState.images.splice(dragSrc, 1);
+        musicState.images.splice(to, 0, item);
+        const [cached] = musicState.cachedImages.splice(dragSrc, 1);
+        musicState.cachedImages.splice(to, 0, cached);
+        renderMusicThumbnails();
+      }
+    });
+  });
+}
+
+// --- Audio Management ---
+musicAudioZone.addEventListener('click', () => musicAudioInput.click());
+musicAudioInput.addEventListener('change', () => {
+  if (musicAudioInput.files.length) {
+    loadMusicAudio(musicAudioInput.files[0]);
+    musicAudioInput.value = '';
+  }
+});
+
+function loadMusicAudio(file) {
+  if (musicState.audioUrl) {
+    URL.revokeObjectURL(musicState.audioUrl);
+  }
+  musicState.audioFile = file;
+  musicState.audioUrl = URL.createObjectURL(file);
+  musicAudioPlayer.src = musicState.audioUrl;
+  musicAudioName.textContent = file.name;
+  musicAudioInfo.style.display = 'block';
+  initWebAudio();
+  updateMusicButtons();
+}
+
+let _webAudioInited = false;
+function initWebAudio() {
+  if (_webAudioInited) return;
+  _webAudioInited = true;
+  musicState.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  musicState.analyser = musicState.audioCtx.createAnalyser();
+  musicState.analyser.fftSize = 256;
+  musicState.gainNode = musicState.audioCtx.createGain();
+  musicState.gainNode.gain.value = 1.0;
+  musicState.source = musicState.audioCtx.createMediaElementSource(musicAudioPlayer);
+  musicState.source.connect(musicState.analyser);
+  musicState.analyser.connect(musicState.gainNode);
+  musicState.gainNode.connect(musicState.audioCtx.destination);
+  musicState.freqArray = new Uint8Array(musicState.analyser.frequencyBinCount);
+  musicState.timeArray = new Uint8Array(musicState.analyser.frequencyBinCount);
+}
+
+function updateMusicButtons() {
+  const hasAudio = musicState.audioFile !== null;
+  const hasImages = musicState.images.length > 0;
+  btnMusicPlay.disabled = !(hasAudio && hasImages);
+  btnMusicExport.disabled = !(hasAudio && hasImages);
+}
+
+// --- Canvas Drawing (8 postcard styles) ---
+function drawVintageBars(ctx, w, h, freqData, timeData, time, dur) {
+  const barCount = freqData.length;
+  const barW = w / barCount;
+  // ctx.clearRect(0, 0, w, h);
+  for (let i = 0; i < barCount; i++) {
+    const val = freqData[i] / 255;
+    const barH = val * h * 0.7;
+    const x = i * barW;
+    const y = h - barH;
+    const r = Math.floor(180 + val * 75);
+    const g = Math.floor(90 + val * 30);
+    const b = Math.floor(60 - val * 20);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    const radius = Math.min(barW * 0.3, 6);
+    const bw = Math.max(2, barW - 3);
+    ctx.beginPath();
+    ctx.roundRect(x + 1.5, y, bw, barH, [radius, radius, 0, 0]);
+    ctx.fill();
+  }
+}
+
+function drawSignatureLine(ctx, w, h, freqData, timeData, time, dur) {
+  // ctx.clearRect(0, 0, w, h);
+  const len = timeData.length;
+  ctx.beginPath();
+  ctx.strokeStyle = '#8B7355';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < len; i++) {
+    const x = (i / len) * w;
+    const damp = Math.sin((i / (len - 1)) * Math.PI);
+    const val = ((timeData[i] / 255) - 0.5) * damp;
+    const y = h / 2 + val * h * 0.3;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function drawSatinRibbon(ctx, w, h, freqData, timeData, time, dur) {
+  // ctx.clearRect(0, 0, w, h);
+  const len = timeData.length;
+  const mid = h / 2;
+  ctx.beginPath();
+  for (let i = 0; i < len; i++) {
+    const x = (i / len) * w;
+    const damp = Math.sin((i / (len - 1)) * Math.PI);
+    const val = ((timeData[i] / 255) - 0.5) * damp;
+    const y = mid + val * h * 0.25;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, mid);
+  ctx.lineTo(0, mid);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, mid - h * 0.25, 0, mid + h * 0.25);
+  grad.addColorStop(0, '#DBA5A0');
+  grad.addColorStop(0.5, '#F4D0C5');
+  grad.addColorStop(1, '#E07A5F');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.strokeStyle = '#E07A5F';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawPostmark(ctx, w, h, freqData, timeData, time, dur) {
+  // ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2;
+  const radius = Math.min(w, h) * 0.3;
+  const count = freqData.length;
+  // Dotted circle border
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.setLineDash([4, 6]);
+  ctx.strokeStyle = '#8B7355';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Inner ring
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 8, 0, Math.PI * 2);
+  ctx.strokeStyle = '#E6B956';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Radial bars
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const val = freqData[i] / 255;
+    const barLen = val * radius * 0.7;
+    ctx.fillStyle = '#3D5A80';
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.fillRect(radius - barLen, -1.5, barLen, 3);
+    ctx.restore();
+  }
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(0, 0, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#1B2838';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawNeonRetro(ctx, w, h, freqData, timeData, time, dur) {
+  const barCount = freqData.length;
+  const barW = w / barCount;
+  for (let i = 0; i < barCount; i++) {
+    const val = freqData[i] / 255;
+    const barH = val * h * 0.6;
+    const x = i * barW;
+    const y = h - barH;
+    
+    // Draw the vertical semi-transparent body so it looks grounded to 0
+    ctx.fillStyle = 'rgba(224, 122, 95, 0.2)';
+    ctx.fillRect(x + 2, y + 3, Math.max(1, barW - 4), barH);
+
+    // Draw the glowing top cap
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#E07A5F';
+    ctx.fillStyle = '#F4A261';
+    ctx.fillRect(x + 2, y, Math.max(1, barW - 4), 3);
+    
+    if (val > 0.3) {
+      ctx.fillStyle = '#E07A5F';
+      ctx.shadowColor = '#E07A5F';
+      ctx.shadowBlur = 25;
+      ctx.fillRect(x + 1, y - 2, Math.max(1, barW - 2), 2);
+    }
+    ctx.shadowBlur = 0;
+  }
+}
+
+function drawConfetti(ctx, w, h, freqData, timeData, time, dur) {
+  // ctx.clearRect(0, 0, w, h);
+  const len = timeData.length;
+  const colors = ['#E07A5F', '#E6B956', '#DBA5A0', '#81A691', '#F4A261', '#F4D0C5'];
+  for (let i = 0; i < len; i++) {
+    const val = timeData[i] / 255;
+    const x = (i / len) * w;
+    const y = val * h;
+    const size = 3 + (freqData[Math.floor(i / len * freqData.length)] / 255) * 8;
+    const hue = (i * 37 + time * 60) % 360;
+    ctx.globalAlpha = 0.4 + (val * 0.5);
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.beginPath();
+    if (i % 3 === 0) {
+      // Circles
+      ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+    } else if (i % 3 === 1) {
+      // Squares
+      ctx.fillRect(x - size * 0.4, y - size * 0.4, size * 0.8, size * 0.8);
+    } else {
+      // Triangles
+      ctx.moveTo(x, y - size * 0.5);
+      ctx.lineTo(x - size * 0.5, y + size * 0.5);
+      ctx.lineTo(x + size * 0.5, y + size * 0.5);
+      ctx.closePath();
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawSunset(ctx, w, h, freqData, timeData, time, dur) {
+  // ctx.clearRect(0, 0, w, h);
+  const len = timeData.length;
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#2D1B69');
+  grad.addColorStop(0.3, '#E07A5F');
+  grad.addColorStop(0.6, '#F4A261');
+  grad.addColorStop(1, '#E6B956');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  for (let i = 0; i < len; i++) {
+    const x = (i / len) * w;
+    const damp = Math.sin((i / (len - 1)) * Math.PI);
+    const dev = ((timeData[i] / 255) - 0.5) * 0.5 * damp;
+    const val = 0.5 + dev;
+    const y = h - val * h * 0.8;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  ctx.fill();
+  // Sun circle
+  const sunY = h * 0.3;
+  const sunR = Math.min(w, h) * 0.04;
+  ctx.beginPath();
+  ctx.arc(w * 0.75, sunY, sunR, 0, Math.PI * 2);
+  ctx.fillStyle = '#FEF08A';
+  ctx.shadowBlur = 30;
+  ctx.shadowColor = '#F4A261';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawOceanWave(ctx, w, h, freqData, timeData, time, dur) {
+  // ctx.clearRect(0, 0, w, h);
+  const t = time || 0;
+  const len = timeData.length;
+  // Wave line
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.6);
+  for (let i = 0; i < len; i++) {
+    const x = (i / len) * w;
+    const damp = Math.sin((i / (len - 1)) * Math.PI);
+    const val = freqData[Math.floor((i / len) * freqData.length)] / 255;
+    const wave = Math.sin((i / len) * 10 + t * 1.5) * 15;
+    const y = h * 0.6 + (val * 40 + wave) * damp;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, h * 0.4, 0, h);
+  grad.addColorStop(0, 'rgba(61, 90, 128, 0.7)');
+  grad.addColorStop(0.5, 'rgba(27, 40, 56, 0.5)');
+  grad.addColorStop(1, 'rgba(129, 166, 145, 0.3)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Second wave
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.7);
+  for (let i = 0; i < len; i++) {
+    const x = (i / len) * w;
+    const damp = Math.sin((i / (len - 1)) * Math.PI);
+    const dev = ((timeData[i] / 255) - 0.5) * 0.5 * damp;
+    const val = 0.25 + dev;
+    const wave = Math.cos((i / len) * 8 + t * 2) * 12;
+    const y = h * 0.7 + val * 30 + wave * damp;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  const grad2 = ctx.createLinearGradient(0, h * 0.5, 0, h);
+  grad2.addColorStop(0, 'rgba(219, 165, 160, 0.5)');
+  grad2.addColorStop(1, 'rgba(244, 208, 197, 0.2)');
+  ctx.fillStyle = grad2;
+  ctx.fill();
+}
+
+function drawPostcardBorder(ctx, w, h) {
+  const m = 16;
+  ctx.strokeStyle = '#F5F0E8';
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = 'rgba(0,0,0,0.1)';
+  ctx.strokeRect(m, m, w - m * 2, h - m * 2);
+  ctx.shadowBlur = 0;
+  // Inner thin line
+  ctx.strokeStyle = 'rgba(139, 115, 85, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(m + 4, m + 4, w - m * 2 - 8, h - m * 2 - 8);
+}
+
+function drawCircularOrbit(ctx, w, h, freqData, timeData, time, dur) {
+  const cx = w / 2, cy = h / 2;
+  const radius = Math.min(w, h) * 0.25;
+  const count = freqData.length;
+  
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(time * 0.5); // Slow rotation
+  
+  // Outer orbit
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 1.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(244, 162, 97, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Inner lines
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const val = freqData[i] / 255;
+    const barLen = val * radius * 1.2;
+    
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(radius + barLen, 0);
+    ctx.strokeStyle = `hsl(${(i/count)*360 + time*50}, 80%, 60%)`;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    
+    // Draw dot at the end
+    if (val > 0.1) {
+      ctx.beginPath();
+      ctx.arc(radius + barLen + 4, 0, 2 + val*3, 0, Math.PI*2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  
+  // Center pulse
+  const avg = freqData.reduce((a,b)=>a+b, 0) / count;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.5 + (avg/255)*radius*0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(224, 122, 95, 0.8)';
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = '#E07A5F';
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+function drawMatrixDrops(ctx, w, h, freqData, timeData, time, dur) {
+  const barCount = freqData.length;
+  const barW = w / barCount;
+  
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#22c55e';
+  ctx.lineCap = 'round';
+  
+  for (let i = 0; i < barCount; i++) {
+    const val = freqData[i] / 255;
+    const x = i * barW + barW/2;
+    
+    // Create a falling effect using time and index
+    const fall = (time * 150 + i * 25) % h;
+    const height = val * h * 0.8 + 10;
+    
+    let y1 = fall - height;
+    let y2 = fall;
+    
+    // Wrap around screen
+    if (y1 < 0) {
+      ctx.beginPath();
+      ctx.moveTo(x, h + y1);
+      ctx.lineTo(x, h);
+      ctx.strokeStyle = `rgba(34, 197, 94, ${0.5 + val*0.5})`;
+      ctx.lineWidth = Math.max(1, barW * 0.4);
+      ctx.stroke();
+      y1 = 0;
+    }
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y1);
+    ctx.lineTo(x, y2);
+    ctx.strokeStyle = `rgba(34, 197, 94, ${0.5 + val*0.5})`;
+    ctx.lineWidth = Math.max(1, barW * 0.4);
+    ctx.stroke();
+    
+    // Bright tip
+    ctx.beginPath();
+    ctx.arc(x, y2, Math.max(1, barW * 0.3), 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawCyberPolygon(ctx, w, h, freqData, timeData, time, dur) {
+  const cx = w / 2, cy = h / 2;
+  const radius = Math.min(w, h) * 0.3;
+  
+  // Number of polygon sides based on frequency points (reduced for clarity)
+  const sides = 16; 
+  const step = Math.floor(freqData.length / sides);
+  
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(time * -0.2); // slowly rotate
+  
+  // Function to draw a dynamic polygon
+  const drawPoly = (scale, color, shadow, width) => {
+    ctx.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const angle = (i / sides) * Math.PI * 2;
+      const val = freqData[i * step] / 255;
+      const r = radius * scale + val * radius * 0.5;
+      const px = Math.cos(angle) * r;
+      const py = Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = shadow;
+    ctx.stroke();
+  };
+
+  // Multiple layers
+  drawPoly(1.0, '#06b6d4', '#06b6d4', 3);  // Cyan outer
+  drawPoly(0.7, '#d946ef', '#d946ef', 2);  // Magenta middle
+  drawPoly(0.4, '#fbbf24', '#fbbf24', 1);  // Yellow inner
+  
+  // Connection lines to center
+  ctx.beginPath();
+  for (let i = 0; i < sides; i++) {
+    const angle = (i / sides) * Math.PI * 2;
+    const val = freqData[i * step] / 255;
+    if (val > 0.4) {
+      const r = radius + val * radius * 0.5;
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+    }
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.shadowBlur = 0;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function draw3DBlocks(ctx, w, h, freqData, timeData, time, dur) {
+  const barCount = Math.min(freqData.length, 64);
+  const spacing = w / barCount;
+  const barW = spacing * 0.55;
+  const depth = barW * 0.8;
+  
+  for (let i = 0; i < barCount; i++) {
+    const val = freqData[i] / 255;
+    const barH = Math.max(5, val * h * 0.6);
+    const x = i * spacing + (spacing - barW) / 2;
+    const y = h * 0.8;
+
+    const hue = (i / barCount) * 360 + time * 60;
+    const frontColor = `hsl(${hue}, 80%, 60%)`;
+    const topColor = `hsl(${hue}, 80%, 75%)`;
+    const sideColor = `hsl(${hue}, 80%, 45%)`;
+
+    ctx.fillStyle = sideColor;
+    ctx.beginPath();
+    ctx.moveTo(x + barW, y);
+    ctx.lineTo(x + barW + depth, y - depth);
+    ctx.lineTo(x + barW + depth, y - barH - depth);
+    ctx.lineTo(x + barW, y - barH);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = topColor;
+    ctx.beginPath();
+    ctx.moveTo(x, y - barH);
+    ctx.lineTo(x + barW, y - barH);
+    ctx.lineTo(x + barW + depth, y - barH - depth);
+    ctx.lineTo(x + depth, y - barH - depth);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = frontColor;
+    ctx.fillRect(x, y - barH, barW, barH);
+  }
+}
+
+const DRAW_FUNCTIONS = [
+  drawVintageBars, drawSignatureLine, drawSatinRibbon, drawPostmark,
+  drawNeonRetro, drawConfetti, drawSunset, drawOceanWave,
+  drawCircularOrbit, drawMatrixDrops, drawCyberPolygon,
+  draw3DBlocks,
+];
+
+// --- Animation Loop ---
+function animateMusic() {
+  if (!musicState.isPlaying && !musicState.isRecording) {
+    musicState.animFrameId = null;
+    return;
+  }
+  musicState.animFrameId = requestAnimationFrame(animateMusic);
+
+  if (musicState.analyser) {
+    musicState.analyser.getByteFrequencyData(musicState.freqArray);
+    musicState.analyser.getByteTimeDomainData(musicState.timeArray);
+  }
+
+  const ctx = musicCanvas.getContext('2d');
+  const w = musicCanvas.width;
+  const h = musicCanvas.height;
+
+  // Draw background image
+  if (musicState.cachedImages.length > 0) {
+    const imgIdx = getCurrentImageIndex();
+    const img = musicState.cachedImages[imgIdx];
+    if (img && img.complete) {
+      ctx.drawImage(img, 0, 0, w, h);
+    }
+  } else {
+    ctx.fillStyle = '#0e0e15';
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // Draw current time
+  const currentTime = musicAudioPlayer.currentTime || 0;
+  const duration = musicAudioPlayer.duration || 1;
+
+  // Draw wave overlay
+  const drawFn = DRAW_FUNCTIONS[musicState.styleId] || DRAW_FUNCTIONS[0];
+  const wr = musicState.waveRect;
+  const wx = wr.x * w;
+  const wy = wr.y * h;
+  const ww = wr.w * w;
+  const wh = wr.h * h;
+
+  ctx.save();
+  ctx.translate(wx, wy);
+  
+  let freq = musicState.freqArray;
+  let timeD = musicState.timeArray;
+  if (!musicState.isPlaying && !musicState.isRecording && (!freq || freq.every(v => v === 0))) {
+     freq = new Uint8Array(128);
+     timeD = new Uint8Array(128);
+     for(let i=0; i<128; i++) {
+        freq[i] = Math.random() * 100 + 50;
+        timeD[i] = 128 + Math.sin(i*0.2)*40;
+     }
+  }
+
+  drawFn(ctx, ww, wh, freq || new Uint8Array(128), timeD || new Uint8Array(128), currentTime, duration);
+  ctx.restore();
+
+  if (!musicState.isRecording) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(wx, wy, ww, wh);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fff';
+    const hs = 8;
+    ctx.fillRect(wx - hs/2, wy - hs/2, hs, hs);
+    ctx.fillRect(wx + ww - hs/2, wy - hs/2, hs, hs);
+    ctx.fillRect(wx - hs/2, wy + wh - hs/2, hs, hs);
+    ctx.fillRect(wx + ww - hs/2, wy + wh - hs/2, hs, hs);
+  }
+
+  // Postcard border overlay
+  if (musicState.images.length > 0) {
+    drawPostcardBorder(ctx, w, h);
+  }
+
+  // Check if audio ended
+  if (musicAudioPlayer.ended) {
+    stopMusicPlayback();
+  }
+}
+
+function getCurrentImageIndex() {
+  if (!musicState.images.length) return 0;
+  const dur = musicAudioPlayer.duration || 1;
+  const perImage = dur / musicState.images.length;
+  const currentTime = musicAudioPlayer.currentTime || 0;
+  return Math.min(Math.floor(currentTime / perImage), musicState.images.length - 1);
+}
+
+function startMusicPlayback() {
+  if (musicState.audioCtx && musicState.audioCtx.state === 'suspended') {
+    musicState.audioCtx.resume();
+  }
+  musicState.isPlaying = true;
+  btnMusicPlayText.textContent = 'Pause';
+  musicHint.style.display = 'none';
+  musicAudioPlayer.play();
+  if (!musicState.animFrameId) {
+    animateMusic();
+  }
+}
+
+function stopMusicPlayback() {
+  musicState.isPlaying = false;
+  btnMusicPlayText.textContent = 'Play';
+  if (musicState.animFrameId) {
+    cancelAnimationFrame(musicState.animFrameId);
+    musicState.animFrameId = null;
+  }
+}
+
+btnMusicPlay.addEventListener('click', () => {
+  if (musicState.isPlaying) {
+    musicAudioPlayer.pause();
+    stopMusicPlayback();
+  } else {
+    startMusicPlayback();
+  }
+});
+
+musicAudioPlayer.addEventListener('play', () => {
+  if (!musicState.isPlaying) {
+    startMusicPlayback();
+  }
+});
+
+musicAudioPlayer.addEventListener('pause', () => {
+  if (!musicAudioPlayer.ended) {
+    stopMusicPlayback();
+  }
+});
+
+musicAudioPlayer.addEventListener('ended', () => {
+  stopMusicPlayback();
+});
+
+// --- Export (MediaRecorder) ---
+btnMusicExport.addEventListener('click', async () => {
+  if (musicState.isRecording) return;
+
+  musicExportProgress.style.display = 'block';
+  musicExportFill.style.width = '0%';
+  musicExportText.textContent = 'Đang xuất video...';
+  btnMusicExport.disabled = true;
+
+  try {
+    musicState.isRecording = true;
+    renderMusicStaticFrame();
+    const stream = musicCanvas.captureStream(30);
+    const audioStream = musicAudioPlayer.captureStream ? musicAudioPlayer.captureStream(30) : null;
+    let finalStream = stream;
+
+    if (audioStream) {
+      const tracks = [...stream.getVideoTracks(), ...audioStream.getAudioTracks()];
+      finalStream = new MediaStream(tracks);
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    musicState.recordedChunks = [];
+    musicState.mediaRecorder = new MediaRecorder(finalStream, { mimeType });
+    musicState.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) musicState.recordedChunks.push(e.data);
+    };
+    musicState.mediaRecorder.onstop = () => {
+      const blob = new Blob(musicState.recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `music_video_${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+      musicExportProgress.style.display = 'none';
+      btnMusicExport.disabled = false;
+      stopMusicPlayback();
+    };
+
+    musicState.mediaRecorder.start();
+    musicAudioPlayer.currentTime = 0;
+    startMusicPlayback();
+
+    let lastProgress = 0;
+    const pollInterval = setInterval(() => {
+      if (musicAudioPlayer.duration) {
+        const pct = Math.min(99, Math.floor((musicAudioPlayer.currentTime / musicAudioPlayer.duration) * 100));
+        musicExportFill.style.width = pct + '%';
+        if (pct > lastProgress) {
+          lastProgress = pct;
+        }
+      }
+    }, 200);
+
+    musicAudioPlayer.onended = () => {
+      clearInterval(pollInterval);
+      setTimeout(() => {
+        musicState.mediaRecorder.stop();
+        musicState.isRecording = false;
+        musicExportFill.style.width = '100%';
+        musicExportText.textContent = 'Hoàn tất!';
+      }, 500);
+    };
+  } catch (err) {
+    console.error('Export error:', err);
+    musicExportText.textContent = 'Lỗi: ' + err.message;
+    btnMusicExport.disabled = false;
+    musicState.isRecording = false;
+    setTimeout(() => { musicExportProgress.style.display = 'none'; }, 2000);
+  }
+});
+
+// --- Reset ---
+btnMusicReset.addEventListener('click', () => {
+  if (musicState.isPlaying) {
+    musicAudioPlayer.pause();
+    stopMusicPlayback();
+  }
+  if (musicState.isRecording) {
+    musicState.mediaRecorder.stop();
+    musicState.isRecording = false;
+  }
+  musicAudioPlayer.currentTime = 0;
+  musicAudioPlayer.pause();
+  musicHint.style.display = 'flex';
+  const ctx = musicCanvas.getContext('2d');
+  ctx.clearRect(0, 0, musicCanvas.width, musicCanvas.height);
+  ctx.fillStyle = '#0e0e15';
+  ctx.fillRect(0, 0, musicCanvas.width, musicCanvas.height);
+});
+
+// Init
+function initMusicTab() {
+  resizeMusicCanvas();
+  renderWaveStyles();
+}
+
 // --- Init ---
 loadVideoList();
 setupTimelineEvents();
 loadSettings();
+initMusicTab();
+
+
+// --- Wave interactive controls ---
+function renderMusicStaticFrame() {
+  if (musicState.isPlaying) return;
+  const ctx = musicCanvas.getContext('2d');
+  const w = musicCanvas.width;
+  const h = musicCanvas.height;
+
+  if (musicState.cachedImages.length > 0) {
+    const imgIdx = getCurrentImageIndex();
+    const img = musicState.cachedImages[imgIdx];
+    if (img && img.complete) {
+      ctx.drawImage(img, 0, 0, w, h);
+    }
+  } else {
+    ctx.fillStyle = '#0e0e15';
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  const currentTime = musicAudioPlayer.currentTime || 0;
+  const duration = musicAudioPlayer.duration || 1;
+
+  const drawFn = DRAW_FUNCTIONS[musicState.styleId] || DRAW_FUNCTIONS[0];
+  const wr = musicState.waveRect;
+  const wx = wr.x * w;
+  const wy = wr.y * h;
+  const ww = wr.w * w;
+  const wh = wr.h * h;
+
+  ctx.save();
+  ctx.translate(wx, wy);
+  let freq = musicState.freqArray;
+  let timeD = musicState.timeArray;
+  if (!freq || freq.every(v => v === 0)) {
+     freq = new Uint8Array(128);
+     timeD = new Uint8Array(128);
+     for(let i=0; i<128; i++) {
+        freq[i] = Math.random() * 100 + 50;
+        timeD[i] = 128 + Math.sin(i*0.2)*40;
+     }
+  }
+  drawFn(ctx, ww, wh, freq, timeD, currentTime, duration);
+  ctx.restore();
+
+  if (musicState.images.length > 0) {
+    drawPostcardBorder(ctx, w, h);
+  }
+
+  if (!musicState.isRecording) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(wx, wy, ww, wh);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fff';
+    const hs = 8;
+    ctx.fillRect(wx - hs/2, wy - hs/2, hs, hs);
+    ctx.fillRect(wx + ww - hs/2, wy - hs/2, hs, hs);
+    ctx.fillRect(wx - hs/2, wy + wh - hs/2, hs, hs);
+    ctx.fillRect(wx + ww - hs/2, wy + wh - hs/2, hs, hs);
+  }
+}
+
+function getWaveHandle(x, y, w, h) {
+  const wr = musicState.waveRect;
+  const wx = wr.x * w;
+  const wy = wr.y * h;
+  const ww = wr.w * w;
+  const wh = wr.h * h;
+  const hs = 15;
+  if (Math.abs(x - wx) < hs && Math.abs(y - wy) < hs) return 'tl';
+  if (Math.abs(x - (wx + ww)) < hs && Math.abs(y - wy) < hs) return 'tr';
+  if (Math.abs(x - wx) < hs && Math.abs(y - (wy + wh)) < hs) return 'bl';
+  if (Math.abs(x - (wx + ww)) < hs && Math.abs(y - (wy + wh)) < hs) return 'br';
+  if (x >= wx && x <= wx + ww && y >= wy && y <= wy + wh) return 'body';
+  return null;
+}
+
+musicCanvas.addEventListener('mousedown', (e) => {
+  const rect = musicCanvas.getBoundingClientRect();
+  const scaleX = musicCanvas.width / rect.width;
+  const scaleY = musicCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  const handle = getWaveHandle(x, y, musicCanvas.width, musicCanvas.height);
+  if (handle) {
+    if (handle === 'body') {
+      musicState.isDraggingWave = true;
+    } else {
+      musicState.isResizingWave = true;
+      musicState.resizeHandle = handle;
+    }
+    musicState.dragStartX = x;
+    musicState.dragStartY = y;
+    musicState.dragStartRect = { ...musicState.waveRect };
+  }
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (musicScreen.style.display === 'none') return;
+
+  if (!musicState.isDraggingWave && !musicState.isResizingWave) {
+    const rect = musicCanvas.getBoundingClientRect();
+    const scaleX = musicCanvas.width / rect.width;
+    const scaleY = musicCanvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    const handle = getWaveHandle(x, y, musicCanvas.width, musicCanvas.height);
+    if (handle === 'tl' || handle === 'br') musicCanvas.style.cursor = 'nwse-resize';
+    else if (handle === 'tr' || handle === 'bl') musicCanvas.style.cursor = 'nesw-resize';
+    else if (handle === 'body') musicCanvas.style.cursor = 'move';
+    else musicCanvas.style.cursor = 'default';
+    return;
+  }
+  
+  const rect = musicCanvas.getBoundingClientRect();
+  const scaleX = musicCanvas.width / rect.width;
+  const scaleY = musicCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  const dx = (x - musicState.dragStartX) / musicCanvas.width;
+  const dy = (y - musicState.dragStartY) / musicCanvas.height;
+  
+  const sr = musicState.dragStartRect;
+  
+  if (musicState.isDraggingWave) {
+    musicState.waveRect.x = Math.max(0, Math.min(1 - sr.w, sr.x + dx));
+    musicState.waveRect.y = Math.max(0, Math.min(1 - sr.h, sr.y + dy));
+  } else if (musicState.isResizingWave) {
+    if (musicState.resizeHandle === 'br') {
+      musicState.waveRect.w = Math.max(0.05, Math.min(1 - sr.x, sr.w + dx));
+      musicState.waveRect.h = Math.max(0.05, Math.min(1 - sr.y, sr.h + dy));
+    } else if (musicState.resizeHandle === 'tl') {
+      const nw = Math.max(0.05, sr.w - dx);
+      const nh = Math.max(0.05, sr.h - dy);
+      if (sr.x + sr.w - nw >= 0 && sr.y + sr.h - nh >= 0) {
+        musicState.waveRect.w = nw;
+        musicState.waveRect.h = nh;
+        musicState.waveRect.x = sr.x + sr.w - nw;
+        musicState.waveRect.y = sr.y + sr.h - nh;
+      }
+    } else if (musicState.resizeHandle === 'tr') {
+      musicState.waveRect.w = Math.max(0.05, Math.min(1 - sr.x, sr.w + dx));
+      const nh = Math.max(0.05, sr.h - dy);
+      if (sr.y + sr.h - nh >= 0) {
+        musicState.waveRect.h = nh;
+        musicState.waveRect.y = sr.y + sr.h - nh;
+      }
+    } else if (musicState.resizeHandle === 'bl') {
+      const nw = Math.max(0.05, sr.w - dx);
+      if (sr.x + sr.w - nw >= 0) {
+        musicState.waveRect.w = nw;
+        musicState.waveRect.x = sr.x + sr.w - nw;
+      }
+      musicState.waveRect.h = Math.max(0.05, Math.min(1 - sr.y, sr.h + dy));
+    }
+  }
+  
+  if (!musicState.isPlaying) {
+     renderMusicStaticFrame();
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  musicState.isDraggingWave = false;
+  musicState.isResizingWave = false;
+});
+
+const origAddMusicImages = addMusicImages;
+addMusicImages = function(files) {
+  origAddMusicImages(files);
+  if (!musicState.isPlaying) renderMusicStaticFrame();
+}
+const origRenderWaveStyles = renderWaveStyles;
+renderWaveStyles = function() {
+  origRenderWaveStyles();
+  setTimeout(() => {
+    musicWaveGrid.querySelectorAll('.wave-style-card').forEach(el => {
+      el.addEventListener('click', () => {
+        if (!musicState.isPlaying) renderMusicStaticFrame();
+      });
+    });
+  }, 100);
+}

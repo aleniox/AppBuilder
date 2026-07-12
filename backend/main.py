@@ -507,25 +507,30 @@ _TTS_LORA_PATH = r"F:\WebEdit\video-editor\modules\spark_tts_lora"
 _TTS_IDLE_TIMEOUT = 300  # seconds before unloading model from GPU
 _tts_last_used = 0.0
 _TTS_LOCK = threading.Lock()
+_tts_loaded = threading.Event()
 
 def _init_tts_engine():
     global _tts_engine, _tts_last_used
     with _TTS_LOCK:
         if _tts_engine is not None:
+            _tts_loaded.set()
             return
         from sparktts_infer import get_engine
         print("[TTS] Pre-loading model (LLM + audio tokenizer)...")
         _tts_engine = get_engine(lora_path=_TTS_LORA_PATH)
         _tts_last_used = time.time()
+        _tts_loaded.set()
         print("[TTS] Model loaded.")
 
 def _ensure_ref_audio(video_id: str = None):
     global _tts_engine, _tts_last_used
+    _tts_loaded.wait()
     with _TTS_LOCK:
         if _tts_engine is None:
             from sparktts_infer import get_engine
             print("[TTS] Loading model...")
             _tts_engine = get_engine(lora_path=_TTS_LORA_PATH)
+            _tts_loaded.set()
         _tts_last_used = time.time()
         engine = _tts_engine
     if video_id:
@@ -544,6 +549,7 @@ def _tts_sleep():
         del _tts_engine
         _tts_engine = None
         _tts_last_used = 0.0
+        _tts_loaded.clear()
         import gc
         gc.collect()
         try:
@@ -834,14 +840,20 @@ def translate_subtitle(video_id: str, payload: TranslateSubPayload):
         raise HTTPException(500, f"Lỗi gọi LLM API: {str(e)}")
 
 
-# Pre-load TTS model at startup so the first request is fast
+# Pre-load TTS model in background so UI loads immediately
 @app.on_event("startup")
 async def _preload_tts():
-    _init_tts_engine()
-    # Start idle monitor thread (daemon so it dies with the server)
+    # Start idle monitor right away
     t = threading.Thread(target=_tts_sleep_monitor, daemon=True)
     t.start()
     print(f"[TTS] Idle monitor started (timeout={_TTS_IDLE_TIMEOUT}s)")
+    # Load model in background, doesn't block server startup
+    thread = threading.Thread(target=_init_tts_engine, daemon=True)
+    thread.start()
+
+@app.get("/api/tts/status")
+def tts_model_status():
+    return {"model_loaded": _tts_engine is not None}
 
 # Mount frontend files after all API endpoints
 frontend_dir = Path(__file__).parent.parent / "frontend"
