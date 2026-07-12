@@ -1206,6 +1206,187 @@ window.translateSub = async function(idx) {
   }
 };
 
+// ==========================================================================
+// TTS TAB
+// ==========================================================================
+const navVideoEditor = document.getElementById('nav-video-editor');
+const navTts = document.getElementById('nav-tts');
+const ttsScreen = document.getElementById('tts-screen');
+const ttsTextInput = document.getElementById('tts-text-input');
+const btnTtsLoadTxt = document.getElementById('btn-tts-load-txt');
+const ttsTxtInput = document.getElementById('tts-txt-input');
+const ttsFileName = document.getElementById('tts-file-name');
+const ttsRefAudioInput = document.getElementById('tts-ref-audio-input');
+const btnTtsUploadRef = document.getElementById('btn-tts-upload-ref');
+const ttsRefStatus = document.getElementById('tts-ref-status');
+const ttsTemperature = document.getElementById('tts-temperature');
+const ttsTempVal = document.getElementById('tts-temp-val');
+const ttsTopK = document.getElementById('tts-top-k');
+const ttsMaxTokens = document.getElementById('tts-max-tokens');
+const btnTtsGenerate = document.getElementById('btn-tts-generate');
+const ttsProgress = document.getElementById('tts-progress');
+const ttsProgressText = document.getElementById('tts-progress-text');
+const ttsProgressFill = document.getElementById('tts-progress-fill');
+const ttsResult = document.getElementById('tts-result');
+const ttsAudioPlayer = document.getElementById('tts-audio-player');
+const ttsDownloadLink = document.getElementById('tts-download-link');
+
+function showVideoEditorScreen() {
+  navVideoEditor.classList.add('active');
+  navTts.classList.remove('active');
+  ttsScreen.style.display = 'none';
+  startScreen.style.display = '';
+  workspaceScreen.style.display = 'none';
+}
+
+function showTTSScreen() {
+  navTts.classList.add('active');
+  navVideoEditor.classList.remove('active');
+  startScreen.style.display = 'none';
+  workspaceScreen.style.display = 'none';
+  ttsScreen.style.display = '';
+}
+
+navVideoEditor.addEventListener('click', showVideoEditorScreen);
+navTts.addEventListener('click', showTTSScreen);
+
+// Load .txt file into textarea
+btnTtsLoadTxt.addEventListener('click', () => ttsTxtInput.click());
+ttsTxtInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    ttsTextInput.value = ev.target.result;
+    ttsFileName.textContent = file.name;
+    ttsFileName.style.color = 'var(--text-secondary)';
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+});
+
+// Temperature slider display
+ttsTemperature.addEventListener('input', () => {
+  ttsTempVal.textContent = parseFloat(ttsTemperature.value).toFixed(2);
+});
+
+// Upload reference audio for TTS
+let ttsRefAudioUploaded = false;
+if (btnTtsUploadRef) {
+  btnTtsUploadRef.addEventListener('click', async () => {
+    const file = ttsRefAudioInput.files[0];
+    if (!file) {
+      ttsRefStatus.textContent = 'Vui lòng chọn file audio trước';
+      ttsRefStatus.className = 'ref-audio-status error';
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    ttsRefStatus.textContent = 'Đang tải lên...';
+    ttsRefStatus.className = 'ref-audio-status loading';
+    btnTtsUploadRef.disabled = true;
+    try {
+      const res = await fetch(`${API}/api/tts/ref-audio`, { method: 'POST', body: formData });
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${errBody}`);
+      }
+      const data = await res.json();
+      ttsRefAudioUploaded = true;
+      ttsRefStatus.textContent = '✓ Đã tải giọng mẫu thành công';
+      ttsRefStatus.className = 'ref-audio-status success';
+      ttsRefAudioInput.value = '';
+    } catch (err) {
+      console.error('Lỗi upload ref audio:', err);
+      ttsRefStatus.textContent = '✗ Tải lên thất bại: ' + err.message;
+      ttsRefStatus.className = 'ref-audio-status error';
+    } finally {
+      btnTtsUploadRef.disabled = false;
+    }
+  });
+}
+
+function showEl(el) {
+  el.style.removeProperty('display');
+}
+
+function hideEl(el) {
+  el.style.display = 'none';
+}
+
+// Generate TTS
+btnTtsGenerate.addEventListener('click', async () => {
+  const text = ttsTextInput.value.trim();
+  if (!text) {
+    alert('Vui lòng nhập văn bản cần chuyển thành giọng nói');
+    return;
+  }
+  hideEl(ttsResult);
+  showEl(ttsProgress);
+  ttsProgressFill.style.width = '0%';
+  ttsProgressFill.classList.remove('animated-stripes');
+  ttsProgressText.textContent = 'Đang tạo giọng nói... 0%';
+  ttsProgressText.className = '';
+  btnTtsGenerate.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/tts/synthesize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        temperature: parseFloat(ttsTemperature.value),
+        top_k: parseInt(ttsTopK.value) || 50,
+        top_p: 1.0,
+        max_tokens: parseInt(ttsMaxTokens.value) || 3000,
+      }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `HTTP ${res.status}`);
+    }
+    const { task_id } = await res.json();
+    let pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await fetch(`${API}/api/tts/synthesize/${task_id}/status`);
+        if (!statusRes.ok) {
+          clearInterval(pollInterval);
+          throw new Error(`HTTP ${statusRes.status}`);
+        }
+        const data = await statusRes.json();
+        if (data.status === "processing") {
+          ttsProgressFill.style.width = `${data.progress}%`;
+          ttsProgressText.textContent = `Đang tạo giọng nói... ${data.progress}%`;
+        } else if (data.status === "completed") {
+          clearInterval(pollInterval);
+          ttsProgressFill.style.width = '100%';
+          ttsProgressText.textContent = 'Đang tạo giọng nói... 100%';
+          const audioUrl = `${API}${data.audio_url}`;
+          ttsAudioPlayer.src = audioUrl;
+          ttsAudioPlayer.load();
+          ttsDownloadLink.href = audioUrl;
+          showEl(ttsResult);
+          hideEl(ttsProgress);
+        } else if (data.status === "failed") {
+          clearInterval(pollInterval);
+          ttsProgressText.textContent = 'Lỗi: ' + (data.error || 'Lỗi không xác định');
+          ttsProgressText.className = 'error-text';
+          ttsProgressFill.style.width = '0%';
+        }
+      } catch (err) {
+        clearInterval(pollInterval);
+        throw err;
+      }
+    }, 500);
+  } catch (err) {
+    console.error('Lỗi TTS:', err);
+    ttsProgressText.textContent = 'Lỗi: ' + err.message;
+    ttsProgressText.className = 'error-text';
+    ttsProgressFill.style.width = '0%';
+  } finally {
+    btnTtsGenerate.disabled = false;
+  }
+});
+
 // --- Init ---
 loadVideoList();
 setupTimelineEvents();

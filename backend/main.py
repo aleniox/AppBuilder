@@ -76,6 +76,10 @@ def save_db(db):
 # Load video database from file
 videos_db = load_db()
 
+# In-memory TTS task progress (no file persistence needed)
+tts_tasks: dict[str, dict] = {}
+tts_tasks_lock = threading.Lock()
+
 
 class SubtitleItem(BaseModel):
     id: str
@@ -90,6 +94,14 @@ class SubtitlesPayload(BaseModel):
     subtitles: List[SubtitleItem]
     voice_enabled: bool = True
     voice_lang: str = "vi"
+
+
+class TTSSynthesizePayload(BaseModel):
+    text: str
+    temperature: float = 0.8
+    top_k: int = 50
+    top_p: float = 1.0
+    max_tokens: int = 3000
 
 
 @app.get("/api/status")
@@ -194,12 +206,12 @@ def synthesize_subtitle(video_id: str, sub_index: int):
     if not text:
         raise HTTPException(400, "Subtitle text is empty")
     engine = _ensure_ref_audio(video_id)
-    import soundfile as sf
-    wav = engine.synthesize(text)
-    if wav.size == 0:
+    out_dir = engine.synthesize_to_folder(text, base_dir=str(OUTPUT_DIR))
+    full_wav = os.path.join(out_dir, "full.wav")
+    if not os.path.isfile(full_wav):
         raise HTTPException(500, "TTS returned empty audio")
     audio_filename = f"sub_audio_{video_id}_{sub['id']}.wav"
-    sf.write(str(OUTPUT_DIR / audio_filename), wav, 16000)
+    shutil.copy2(full_wav, str(OUTPUT_DIR / audio_filename))
     sub["audio_path"] = audio_filename
     save_db(videos_db)
     return {"status": "ok", "audio_path": audio_filename}
@@ -412,6 +424,84 @@ def delete_video(video_id: str):
     return {"status": "deleted"}
 
 
+_TTS_REF_AUDIO_PATH = None
+
+
+@app.post("/api/tts/ref-audio")
+def tts_upload_ref_audio(file: UploadFile = File(...)):
+    global _TTS_REF_AUDIO_PATH
+    ext = os.path.splitext(file.filename or "ref.wav")[1] or ".wav"
+    ref_filename = f"tts_ref_{uuid.uuid4().hex[:8]}{ext}"
+    ref_path = REF_AUDIO_DIR / ref_filename
+    content = file.file.read()
+    with open(ref_path, "wb") as f:
+        f.write(content)
+    _TTS_REF_AUDIO_PATH = str(ref_path)
+    engine = _ensure_ref_audio()
+    engine.load_reference(_TTS_REF_AUDIO_PATH)
+    return {"status": "ok", "filename": ref_filename}
+
+
+@app.post("/api/tts/synthesize")
+def tts_synthesize(payload: TTSSynthesizePayload, background_tasks: BackgroundTasks):
+    task_id = uuid.uuid4().hex[:12]
+    with tts_tasks_lock:
+        tts_tasks[task_id] = {
+            "status": "processing",
+            "progress": 0,
+            "error": None,
+            "audio_url": None,
+        }
+    background_tasks.add_task(_background_tts_task, task_id, payload)
+    return {"task_id": task_id}
+
+
+@app.get("/api/tts/synthesize/{task_id}/status")
+def tts_status(task_id: str):
+    with tts_tasks_lock:
+        task = tts_tasks.get(task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    return task
+
+
+def _background_tts_task(task_id: str, payload: TTSSynthesizePayload):
+    try:
+        engine = _ensure_ref_audio()
+        
+        def progress_callback(pct):
+            with tts_tasks_lock:
+                if task_id in tts_tasks:
+                    tts_tasks[task_id]["progress"] = min(pct, 99)
+        
+        out_dir = engine.synthesize_to_folder(
+            payload.text,
+            ref_audio=_TTS_REF_AUDIO_PATH,
+            temperature=payload.temperature,
+            top_k=payload.top_k,
+            top_p=payload.top_p,
+            max_tokens=payload.max_tokens,
+            base_dir=str(OUTPUT_DIR),
+            progress_callback=progress_callback,
+        )
+        full_wav = os.path.join(out_dir, "full.wav")
+        if not os.path.isfile(full_wav):
+            raise Exception("TTS returned empty audio")
+        audio_filename = f"tts_{uuid.uuid4().hex[:8]}.wav"
+        shutil.copy2(full_wav, str(OUTPUT_DIR / audio_filename))
+        with tts_tasks_lock:
+            if task_id in tts_tasks:
+                tts_tasks[task_id]["status"] = "completed"
+                tts_tasks[task_id]["progress"] = 100
+                tts_tasks[task_id]["audio_url"] = f"/api/download/{audio_filename}"
+    except Exception as e:
+        print(f"Background TTS error for {task_id}: {e}")
+        with tts_tasks_lock:
+            if task_id in tts_tasks:
+                tts_tasks[task_id]["status"] = "failed"
+                tts_tasks[task_id]["error"] = str(e)
+
+
 _tts_engine = None
 _TTS_LORA_PATH = r"F:\WebEdit\video-editor\modules\spark_tts_lora"
 _TTS_IDLE_TIMEOUT = 300  # seconds before unloading model from GPU
@@ -474,14 +564,12 @@ def _tts_sleep_monitor():
 
 def _generate_voice_only(subtitles: list, output_path: str, lang: str = None, video_duration: float = 60.0, video_id: str = None):
     from pydub import AudioSegment
-    import soundfile as sf
 
     if not subtitles:
         raise Exception("No subtitles to generate voice")
 
     total_duration_ms = int((video_duration or 60.0) * 1000) + 5000
     final = AudioSegment.silent(duration=total_duration_ms)
-    sr = 16000
 
     engine = _ensure_ref_audio(video_id)
 
@@ -499,16 +587,14 @@ def _generate_voice_only(subtitles: list, output_path: str, lang: str = None, vi
         if audio_full and os.path.isfile(audio_full):
             seg = AudioSegment.from_file(audio_full)
         else:
-            wav = engine.synthesize(text)
-            if wav.size == 0:
+            out_dir = engine.synthesize_to_folder(text, base_dir=str(OUTPUT_DIR))
+            full_wav = os.path.join(out_dir, "full.wav")
+            if not os.path.isfile(full_wav):
                 continue
-            temp_file = f"__temp_sparktts_{video_id}_{i}.wav"
-            sf.write(temp_file, wav, sr)
-            seg = AudioSegment.from_wav(temp_file)
-            os.remove(temp_file)
+            seg = AudioSegment.from_file(full_wav)
             # Save audio for future reuse
             audio_fn = f"sub_audio_{video_id}_{sub['id']}.wav"
-            sf.write(str(OUTPUT_DIR / audio_fn), wav, sr)
+            shutil.copy2(full_wav, str(OUTPUT_DIR / audio_fn))
             sub["audio_path"] = audio_fn
 
         start_ms = int(sub["start"] * 1000)

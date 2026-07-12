@@ -65,7 +65,13 @@ class FastAudioTokenizer:
 
 
 def split_text(text, max_chars=200):
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    lines = text.strip().split('\n')
+    sentences = []
+    for line in lines:
+        parts = re.split(r'(?<=[.!?…:;])["\']?(?:\s+|$)', line.strip())
+        sentences.extend(s.strip() for s in parts if s.strip())
+    if not sentences:
+        sentences = [text.strip()]
     chunks, current = [], ""
     for s in sentences:
         if len(current) + len(s) > max_chars and current:
@@ -255,7 +261,7 @@ class SparkTTSEngine:
         temperature: float = 0.8,
         top_k: int = 50,
         top_p: float = 1.0,
-        max_tokens: int = 3000,
+        max_tokens: int = 2048,
         max_chunk_chars: int = 200,
     ) -> np.ndarray:
         if ref_audio:
@@ -318,6 +324,7 @@ class SparkTTSEngine:
         max_tokens: int = 3000,
         max_chunk_chars: int = 200,
         base_dir: str = "outputs",
+        progress_callback=None,
     ) -> str:
         out_dir = _make_output_dir(text, base_dir)
         sr = self.audio_tokenizer.config.get("sample_rate", 16000)
@@ -329,6 +336,9 @@ class SparkTTSEngine:
 
         chunks = split_text(text, max_chunk_chars)
 
+        if progress_callback:
+            progress_callback(0)
+
         if len(chunks) <= 1:
             wav = generate_speech(
                 text, self.model, self.tokenizer, self.audio_tokenizer,
@@ -339,10 +349,15 @@ class SparkTTSEngine:
             if wav.size > 0:
                 sf.write(os.path.join(out_dir, "chunk_001.wav"), wav, sr)
                 sf.write(os.path.join(out_dir, "full.wav"), wav, sr)
+            if progress_callback:
+                progress_callback(100)
             return out_dir
 
         parts = []
-        for i, chunk in tqdm(enumerate(chunks, 1), total=len(chunks), desc="Processing chunks"):
+        total = len(chunks)
+        for i, chunk in tqdm(enumerate(chunks, 1), total=total, desc="Processing chunks"):
+            if progress_callback:
+                progress_callback(int((i - 1) / total * 100))
             wav = generate_speech(
                 chunk, self.model, self.tokenizer, self.audio_tokenizer,
                 ref_glo_ids=glo_ids,
@@ -357,6 +372,8 @@ class SparkTTSEngine:
 
         if parts:
             sf.write(os.path.join(out_dir, "full.wav"), np.concatenate(parts), sr)
+        if progress_callback:
+            progress_callback(100)
         return out_dir
 
 
@@ -377,7 +394,7 @@ def get_engine(
             )
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        _engine_instance = SparkTTSEngine(base_model, lora_path, device, ref_audio)
+        _engine_instance = SparkTTSEngine(base_model, lora_path, device, r"F:\WebEdit\video-editor\audio_speaker.mp3")
     return _engine_instance
 
 
