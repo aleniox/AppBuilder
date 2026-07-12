@@ -342,7 +342,7 @@ class SparkTTSEngine:
             return out_dir
 
         parts = []
-        for i, chunk in enumerate(chunks, 1):
+        for i, chunk in tqdm(enumerate(chunks, 1), total=len(chunks), desc="Processing chunks"):
             wav = generate_speech(
                 chunk, self.model, self.tokenizer, self.audio_tokenizer,
                 ref_glo_ids=glo_ids,
