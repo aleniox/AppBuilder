@@ -22,6 +22,17 @@ if sys.platform == 'win32':
             pass
     proactor_events._ProactorBasePipeTransport._call_connection_lost = _patched_call_connection_lost
 
+    # Add nvidia CUDA DLLs to PATH (installed via pip packages: nvidia-cublas, nvidia-cudnn, etc.)
+    _venv_nvidia = Path(__file__).parent.parent / ".venv" / "Lib" / "site-packages" / "nvidia"
+    _cuda_bins = [
+        _venv_nvidia / "cublas" / "bin",
+        _venv_nvidia / "cuda_nvrtc" / "bin",
+        _venv_nvidia / "cudnn" / "bin",
+    ]
+    for _bin in _cuda_bins:
+        if _bin.is_dir():
+            os.environ["PATH"] = str(_bin) + os.pathsep + os.environ["PATH"]
+
 modules_dir = Path(__file__).parent.parent / "modules"
 if str(modules_dir) not in sys.path:
     sys.path.insert(0, str(modules_dir))
@@ -177,7 +188,7 @@ async def youtube_download(url: str = Form(...)):
 
 
 @app.post("/api/video/{video_id}/transcribe")
-def transcribe_video(video_id: str, background_tasks: BackgroundTasks):
+def transcribe_video(video_id: str, background_tasks: BackgroundTasks, language: str = "en"):
     video = videos_db.get(video_id)
     if not video:
         raise HTTPException(404, "Video not found")
@@ -216,7 +227,7 @@ def transcribe_video(video_id: str, background_tasks: BackgroundTasks):
         task_id,
         temp_audio,
         model_name="medium",
-        language="en",
+        language=language,
     )
 
     return {"task_id": task_id}

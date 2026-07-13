@@ -33,6 +33,7 @@ const voiceToggle = document.getElementById('voice-toggle');
 const voiceLang = document.getElementById('voice-lang');
 const progressBar = document.getElementById('progress-bar');
 const progressFill = document.getElementById('progress-fill');
+const sttLang = document.getElementById('stt-lang');
 const sttProgress = document.getElementById('stt-progress');
 const sttText = document.getElementById('stt-text');
 const sttFill = document.getElementById('stt-fill');
@@ -695,7 +696,8 @@ btnStt.addEventListener('click', async () => {
   sttFill.style.width = '0%';
 
   try {
-    const res = await fetch(`${API}/api/video/${currentVideoId}/transcribe`, { method: 'POST' });
+    const lang = sttLang ? sttLang.value : 'en';
+    const res = await fetch(`${API}/api/video/${currentVideoId}/transcribe?language=${lang}`, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || `HTTP ${res.status}`);

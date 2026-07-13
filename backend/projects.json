@@ -9,10 +9,2330 @@
     "subtitles": [
       {
         "id": "sub_1",
-        "start": 202.5,
-        "end": 300.0,
-        "text": "hihi\n",
-        "voice": "vi",
+        "start": 16.477,
+        "end": 24.202,
+        "text": "Elon, what kind of crazy dream would persuade you to think of trying to take on the auto industry and build an all-electric car?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_2",
+        "start": 25.336,
+        "end": 28.017,
+        "text": "Well, it goes back to when I was in university.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_3",
+        "start": 28.177,
+        "end": 33.079,
+        "text": "I thought about what are the problems that are most likely to affect the future of the world or future of humanity.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_4",
+        "start": 33.6,
+        "end": 38.702,
+        "text": "I think it's extremely important that we have sustainable transport and sustainable energy production.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_5",
+        "start": 38.902,
+        "end": 43.144,
+        "text": "That sort of overall sustainable energy problem is the biggest problem that we have to solve this century.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_6",
+        "start": 43.584,
+        "end": 45.165,
+        "text": "Independent of environmental concerns.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_7",
+        "start": 45.965,
+        "end": 51.548,
+        "text": "In fact, even if producing CO2 is good for the environment, given that we're going to run out of hydrocarbons,",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_8",
+        "start": 52.308,
+        "end": 55.449,
+        "text": "we need to find some sustainable means of operating.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_9",
+        "start": 56.79,
+        "end": 61.112,
+        "text": "Most of American electricity comes from burning fossil fuels.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_10",
+        "start": 61.472,
+        "end": 65.613,
+        "text": "How can an electric car that plugs into that electricity help?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_11",
+        "start": 66.454,
+        "end": 67.114,
+        "text": "Right.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_12",
+        "start": 67.334,
+        "end": 69.015,
+        "text": "There's two elements to that answer.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_13",
+        "start": 69.215,
+        "end": 76.618,
+        "text": "One is that even if you take the same source fuel and produce power at the power plant and use it to charge electric cars, you're still better off.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_14",
+        "start": 77.058,
+        "end": 81.04,
+        "text": "So if you take, say, natural gas, which is the most prevalent hydrocarbon source fuel,",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_15",
+        "start": 82.02,
+        "end": 88.065,
+        "text": "If you burn that in a modern, general electric, natural gas turbine, you'll get about 60% efficiency.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_16",
+        "start": 88.646,
+        "end": 92.429,
+        "text": "If you put that same fuel in a combustion engine car, you get about 20% efficiency.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_17",
+        "start": 93.07,
+        "end": 102.678,
+        "text": "And the reason is, in the stationary power plant, you can afford to have something that weighs a lot more, is voluminous, and you can take the waste heat and run a steam turbine to generate a secondary power source.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_18",
+        "start": 103.338,
+        "end": 112.986,
+        "text": "So, in effect, even if you take transmission losses into account and everything, even using the same source fuel, you're at least twice as better off charging an electric car than burning it at the power plant.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_19",
+        "start": 113.486,
+        "end": 114.967,
+        "text": "That scale delivers efficiency.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_20",
+        "start": 115.488,
+        "end": 116.669,
+        "text": "Yes, it does.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_21",
+        "start": 117.109,
+        "end": 121.913,
+        "text": "And then the other point is we have to have sustainable means of power generation anyway, electricity generation.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_22",
+        "start": 122.233,
+        "end": 130.9,
+        "text": "So, given that we have to solve sustainable electricity generation, then it makes sense for us to have electric cars as the mode of transport.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_23",
+        "start": 131.46,
+        "end": 137.383,
+        "text": "So we've got some video here of the Tesla being assembled, which if you could play that first video.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_24",
+        "start": 138.503,
+        "end": 142.905,
+        "text": "So what is innovative about this process in this vehicle?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_25",
+        "start": 143.606,
+        "end": 143.846,
+        "text": "Sure.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_26",
+        "start": 143.906,
+        "end": 152.49,
+        "text": "So in order to accelerate the advent of electric transport, and I should say that I think actually all modes of transport will become fully electric, with the ironic exception of rockets.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_27",
+        "start": 154.191,
+        "end": 158.233,
+        "text": "So there's just no way around Newton's third law.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_28",
+        "start": 159.133,
+        "end": 163.897,
+        "text": "The question is, how do you accelerate the advent of electric transport?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_29",
+        "start": 163.937,
+        "end": 168.4,
+        "text": "And in order to do that for cars, you have to come up with a really energy-efficient car.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_30",
+        "start": 168.8,
+        "end": 170.421,
+        "text": "So that means making it incredibly light.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_31",
+        "start": 170.481,
+        "end": 175.465,
+        "text": "And so what you're seeing here is the only all-aluminum body and chassis car made in North America.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_32",
+        "start": 175.845,
+        "end": 181.81,
+        "text": "In fact, we applied a lot of rocket design techniques to make the car light despite having a very large battery pack.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_33",
+        "start": 182.31,
+        "end": 185.595,
+        "text": "And then it also has the lowest drag coefficient of any car of its size.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_34",
+        "start": 185.795,
+        "end": 194.047,
+        "text": "So as a result, the energy usage is very low, and it has the most advanced battery pack, and that's what gives it the range that's competitive.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_35",
+        "start": 194.067,
+        "end": 196.09,
+        "text": "So you can actually have, on the order of a 250-mile range.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_36",
+        "start": 197.272,
+        "end": 207.756,
+        "text": "I mean, those battery packs are incredibly heavy, but you think the math can still work out intelligently by combining light body, heavy battery, you can still gain spectacular efficiency.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_37",
+        "start": 208.296,
+        "end": 208.656,
+        "text": "Exactly.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_38",
+        "start": 208.776,
+        "end": 214.958,
+        "text": "The rest of the car has to be very light to offset the mass of the pack, and then you have to have a low drag coefficient so you have good highway range.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_39",
+        "start": 215.338,
+        "end": 215.599,
+        "text": "In fact,",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_40",
+        "start": 217.719,
+        "end": 222.281,
+        "text": "Customers of the Model S are sort of competing with each other to try to get the highest possible range.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_41",
+        "start": 222.701,
+        "end": 226.142,
+        "text": "I think somebody recently got 420 miles out of a single charge.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_42",
+        "start": 226.402,
+        "end": 230.903,
+        "text": "Bruno Bowden, who's here, did that, broke the world record, 425.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_43",
+        "start": 232.184,
+        "end": 232.744,
+        "text": "That was the good news.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_44",
+        "start": 232.764,
+        "end": 237.865,
+        "text": "The bad news was to do it, he had to drive at 18 miles an hour, constant speed, and got pulled over by the cops.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_45",
+        "start": 240.766,
+        "end": 250.958,
+        "text": "I mean, you can certainly drive, if you drive at 65 miles an hour under normal conditions, 250 miles is a reasonable number.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_46",
+        "start": 251.198,
+        "end": 254.462,
+        "text": "Let's show that second video showing the Tesla in action on ice.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_47",
+        "start": 254.983,
+        "end": 256.965,
+        "text": "Not at all a dig at the New York Times, by the way.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_48",
+        "start": 257.465,
+        "end": 261.386,
+        "text": "What is the most surprising thing about the experience of driving the car?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_49",
+        "start": 261.626,
+        "end": 265.227,
+        "text": "In creating an electric car, the responsiveness of the car is really incredible.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_50",
+        "start": 265.267,
+        "end": 269.987,
+        "text": "So we want to really have people feel as though they've almost got a mind meld with the car.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_51",
+        "start": 270.047,
+        "end": 272.948,
+        "text": "So you just feel like you and the car are kind of one.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_52",
+        "start": 273.228,
+        "end": 278.489,
+        "text": "And as you corner and accelerate, it just happens, like the car has ESP.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_53",
+        "start": 279.249,
+        "end": 281.47,
+        "text": "You can do that with an electric car because of its responsiveness.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_54",
+        "start": 281.49,
+        "end": 282.77,
+        "text": "You can't do that with a gasoline car.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_55",
+        "start": 283.902,
+        "end": 287.588,
+        "text": "I think that's really a profound difference, and people only experience that when they have a test drive.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_56",
+        "start": 288.549,
+        "end": 293.797,
+        "text": "I mean, this is a beautiful but expensive car.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_57",
+        "start": 294.137,
+        "end": 297.682,
+        "text": "Is there a road map where this becomes a mass market vehicle?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_58",
+        "start": 298.485,
+        "end": 311.788,
+        "text": "Yeah, the goal of Tesla has always been to have a sort of three-step process, where version one was an expensive car at low volume, version two is sort of medium price and medium volume, and then version three would be low price, high volumes.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_59",
+        "start": 311.868,
+        "end": 313.269,
+        "text": "We're at step two at this point.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_60",
+        "start": 313.689,
+        "end": 316.27,
+        "text": "So we had a $100,000 sports car, which was the Roadster.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_61",
+        "start": 316.67,
+        "end": 318.89,
+        "text": "Then we've got the Model S, which starts at around $50,000.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_62",
+        "start": 318.93,
+        "end": 324.332,
+        "text": "And our third generation car, which will hopefully be out in about three or four years, will be a $30,000 car.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_63",
+        "start": 326.272,
+        "end": 333.156,
+        "text": "But whenever you've got really new technology, it generally takes about three major versions in order to make it a compelling mass market product.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_64",
+        "start": 333.817,
+        "end": 338.419,
+        "text": "And so I think we're making progress in that direction, and I feel confident that we'll get there.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_65",
+        "start": 338.699,
+        "end": 348.905,
+        "text": "I mean, right now, if you've got a short commute, or you drive, you can get back, you can charge at home, there isn't a huge nationwide network of charging stations now that are fast.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_66",
+        "start": 348.945,
+        "end": 353.068,
+        "text": "Do you see that coming, really, truly, or just on a few key routes?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_67",
+        "start": 354.688,
+        "end": 357.669,
+        "text": "There actually are far more charging stations than people realize.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_68",
+        "start": 359.17,
+        "end": 362.911,
+        "text": "And at Tesla we developed something called the supercharging technology.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_69",
+        "start": 363.532,
+        "end": 367.913,
+        "text": "And we're offering that if you buy a Model S for free, forever.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_70",
+        "start": 368.333,
+        "end": 370.214,
+        "text": "And so this is something that maybe a lot of people don't realize.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_71",
+        "start": 371.054,
+        "end": 373.575,
+        "text": "We actually have California and Nevada covered.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_72",
+        "start": 374.075,
+        "end": 377.537,
+        "text": "We've got the Eastern Seaboard from Boston to D.C. covered.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_73",
+        "start": 378.297,
+        "end": 381.098,
+        "text": "By the end of this year you'll be able to drive from L.A. to New York.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_74",
+        "start": 381.518,
+        "end": 386.879,
+        "text": "you're just using a supercharger network, which charges it five times the rate of anything else.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_75",
+        "start": 388.52,
+        "end": 394.802,
+        "text": "And the key thing is to have a ratio of drive to stop, to stop time, of about six or seven.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_76",
+        "start": 395.182,
+        "end": 401.103,
+        "text": "So if you drive for three hours, you want to stop for 20 or 30 minutes, because that's normally what people will stop for.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_77",
+        "start": 401.443,
+        "end": 407.585,
+        "text": "So if you start a trip at 9 a.m., by noon, you want to stop to have a bite to eat, hit the restroom, coffee, and keep going.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_78",
+        "start": 407.865,
+        "end": 411.226,
+        "text": "So your proposition to consumers is, for the full charge, it can take an hour.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_79",
+        "start": 411.586,
+        "end": 415.187,
+        "text": "So it's common, don't expect to be out of here in 10 minutes.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_80",
+        "start": 415.267,
+        "end": 415.848,
+        "text": "Wait for an hour.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_81",
+        "start": 415.888,
+        "end": 418.488,
+        "text": "But the good news is, you're helping save the planet.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_82",
+        "start": 418.528,
+        "end": 420.009,
+        "text": "And by the way, the electricity is free.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_83",
+        "start": 420.049,
+        "end": 420.989,
+        "text": "No, you don't pay anything.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_84",
+        "start": 421.469,
+        "end": 426.271,
+        "text": "Actually, what we're expecting is for people to stop for about 20 to 30 minutes, not for an hour.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_85",
+        "start": 427.371,
+        "end": 429.412,
+        "text": "It's actually better to drive for,",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_86",
+        "start": 430.332,
+        "end": 437.92,
+        "text": "about maybe 160, 170 miles and then stop for half an hour and then keep going.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_87",
+        "start": 437.94,
+        "end": 440.702,
+        "text": "That's the natural cadence of a trip.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_88",
+        "start": 441.103,
+        "end": 441.843,
+        "text": "All right.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_89",
+        "start": 441.923,
+        "end": 445.367,
+        "text": "So this is only one string to your energy bow.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_90",
+        "start": 445.387,
+        "end": 448.029,
+        "text": "You've been working on this solar company, Solar City.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_91",
+        "start": 448.069,
+        "end": 450.392,
+        "text": "What's unusual about that?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_92",
+        "start": 451.713,
+        "end": 457.896,
+        "text": "Well, as I mentioned earlier, we have to have sustainable electricity production as well as consumption.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_93",
+        "start": 458.116,
+        "end": 464.139,
+        "text": "So I'm quite confident that the primary means of power generation will be solar.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_94",
+        "start": 464.159,
+        "end": 466.44,
+        "text": "I mean, it's really indirect fusion is what it is.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_95",
+        "start": 466.98,
+        "end": 470.021,
+        "text": "We've got this giant fusion generator in the sky called the sun.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_96",
+        "start": 470.942,
+        "end": 475.544,
+        "text": "And we just need to tap a little bit of that energy for purposes of human civilization.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_97",
+        "start": 476.024,
+        "end": 480.669,
+        "text": "people know but don't realize they know is that the world is almost entirely solar powered already.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_98",
+        "start": 482.21,
+        "end": 485.573,
+        "text": "If the sun wasn't there, we'd be a frozen ice ball at three degrees Kelvin.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_99",
+        "start": 486.614,
+        "end": 490.198,
+        "text": "And the sun powers the entire system of precipitation.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_100",
+        "start": 490.738,
+        "end": 492.881,
+        "text": "The whole ecosystem is solar powered.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_101",
+        "start": 493.381,
+        "end": 499.646,
+        "text": "But in the gallon of gasoline, you have effectively thousands of years of sun power compressed into a small space.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_102",
+        "start": 499.686,
+        "end": 507.031,
+        "text": "So it's hard to make the numbers work right now on solar and to remotely compete with, for example, natural gas, fracture natural gas.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_103",
+        "start": 507.251,
+        "end": 509.013,
+        "text": "How are you going to build a business here?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_104",
+        "start": 510.134,
+        "end": 516.158,
+        "text": "Well, actually, I'm confident that solar will beat everything, hands down, including natural gas.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_105",
+        "start": 516.839,
+        "end": 517.039,
+        "text": "How?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_106",
+        "start": 519.131,
+        "end": 520.152,
+        "text": "It must, actually.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_107",
+        "start": 520.572,
+        "end": 522.153,
+        "text": "If it doesn't, we're in deep trouble.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_108",
+        "start": 522.393,
+        "end": 525.595,
+        "text": "But you're not selling solar panels to consumers.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_109",
+        "start": 525.615,
+        "end": 526.355,
+        "text": "What are you doing?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_110",
+        "start": 526.936,
+        "end": 527.576,
+        "text": "No, we actually are.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_111",
+        "start": 527.956,
+        "end": 531.418,
+        "text": "You can buy a solar system or you can lease a solar system.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_112",
+        "start": 531.438,
+        "end": 532.539,
+        "text": "Most people choose to lease.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_113",
+        "start": 533.819,
+        "end": 538.102,
+        "text": "And the thing about solar power is that it doesn't have any feedstock or operational costs.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_114",
+        "start": 538.222,
+        "end": 539.543,
+        "text": "So once it's installed,",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_115",
+        "start": 540.323,
+        "end": 541.444,
+        "text": "I mean, it's just there.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_116",
+        "start": 541.464,
+        "end": 542.865,
+        "text": "It works for decades.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_117",
+        "start": 542.925,
+        "end": 544.566,
+        "text": "It'll work for probably a century.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_118",
+        "start": 546.107,
+        "end": 553.131,
+        "text": "And so therefore, the key thing to do is to get the cost of that initial installation low and then get the cost of the financing low.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_119",
+        "start": 553.771,
+        "end": 557.253,
+        "text": "Because those are the two factors that drive the cost of solar.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_120",
+        "start": 558.354,
+        "end": 560.415,
+        "text": "And we've made huge progress in that direction.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_121",
+        "start": 561.175,
+        "end": 563.857,
+        "text": "And that's why I'm confident it will actually beat natural gas.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_122",
+        "start": 564.237,
+        "end": 568.961,
+        "text": "So your current proposition to consumers is, don't pay so much upfront.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_123",
+        "start": 569.842,
+        "end": 571.683,
+        "text": "Let us pay zero upfront.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_124",
+        "start": 571.964,
+        "end": 574.706,
+        "text": "We will install panels on your roof.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_125",
+        "start": 574.826,
+        "end": 577.568,
+        "text": "You will then pay, how long is a typical lease?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_126",
+        "start": 578.769,
+        "end": 580.851,
+        "text": "Typical leases are 20 years.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_127",
+        "start": 581.531,
+        "end": 586.295,
+        "text": "But the value proposition is, as you were sort of alluding to, quite straightforward.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_128",
+        "start": 586.516,
+        "end": 589.698,
+        "text": "It's no money down and your utility bill decreases.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_129",
+        "start": 590.82,
+        "end": 591.5,
+        "text": "So it's a pretty good deal.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_130",
+        "start": 591.52,
+        "end": 594.021,
+        "text": "So that seems like a win for the consumer.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_131",
+        "start": 594.061,
+        "end": 594.641,
+        "text": "No risk.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_132",
+        "start": 594.821,
+        "end": 596.022,
+        "text": "You will pay less than you're paying now.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_133",
+        "start": 596.282,
+        "end": 603.704,
+        "text": "And for you, the dream here then is that, I mean, who owns the electricity from those panels for the longer term?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_134",
+        "start": 603.724,
+        "end": 606.225,
+        "text": "I mean, how do you, the company, benefit?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_135",
+        "start": 606.965,
+        "end": 609.066,
+        "text": "Well, essentially the...",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_136",
+        "start": 610.604,
+        "end": 619.591,
+        "text": "Solicity raises a chunk of capital from, say, a company or a bank.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_137",
+        "start": 620.131,
+        "end": 621.833,
+        "text": "Google's one of our big partners here.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_138",
+        "start": 622.473,
+        "end": 624.394,
+        "text": "And they have an expected return on that capital.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_139",
+        "start": 625.195,
+        "end": 635.543,
+        "text": "With that capital, Solicity purchases and installs the panel on the roof and then charges the homeowner or business owner a monthly lease payment, which is less than the utility bill.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_140",
+        "start": 635.803,
+        "end": 639.707,
+        "text": "But you yourself get a sort of long-term commercial benefit from that power.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_141",
+        "start": 639.727,
+        "end": 642.77,
+        "text": "You're kind of building a new type of distributed utility.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_142",
+        "start": 643.57,
+        "end": 643.951,
+        "text": "Exactly.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_143",
+        "start": 643.971,
+        "end": 647.194,
+        "text": "What it amounts to is a giant distributed utility.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_144",
+        "start": 647.995,
+        "end": 654.12,
+        "text": "And I think it's a good thing because utilities have been this monopoly and people haven't had any choice.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_145",
+        "start": 654.18,
+        "end": 655.982,
+        "text": "So effectively, it's the first time",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_146",
+        "start": 657.223,
+        "end": 665.068,
+        "text": "There's been competition for this monopoly because the utilities have been the only ones that own those power distribution lines, but now it's on your roof.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_147",
+        "start": 665.168,
+        "end": 669.171,
+        "text": "So I think it's actually very empowering for homeowners and businesses.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_148",
+        "start": 669.731,
+        "end": 679.238,
+        "text": "And you really picture a future where a majority of power in America, like within a decade or two or within your lifetime, is still solar?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_149",
+        "start": 681.247,
+        "end": 687.049,
+        "text": "I'm extremely confident that solar will be at least a plurality of power and most likely a majority.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_150",
+        "start": 688.69,
+        "end": 692.531,
+        "text": "And I predict it will be a plurality in less than 20 years.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_151",
+        "start": 692.711,
+        "end": 693.071,
+        "text": "I'd say...",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_152",
+        "start": 693.951,
+        "end": 694.852,
+        "text": "I made that bet with someone...",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_153",
+        "start": 694.872,
+        "end": 696.092,
+        "text": "The definition of plurality is?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_154",
+        "start": 696.552,
+        "end": 698.353,
+        "text": "More from solar than any other source.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_155",
+        "start": 700.154,
+        "end": 702.115,
+        "text": "Who did you make the bet with?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_156",
+        "start": 702.175,
+        "end": 704.976,
+        "text": "With a friend who remained nameless.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_157",
+        "start": 705.957,
+        "end": 709.218,
+        "text": "Just between us.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_158",
+        "start": 709.918,
+        "end": 712.08,
+        "text": "I made that bet two or three years ago.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_159",
+        "start": 712.14,
+        "end": 717.262,
+        "text": "So roughly 18 years, I think we'll see more power from solar than any other source.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_160",
+        "start": 717.422,
+        "end": 717.662,
+        "text": "All right.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_161",
+        "start": 717.842,
+        "end": 720.264,
+        "text": "So let's go back to another bet that you made with yourself, I guess.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_162",
+        "start": 720.324,
+        "end": 721.544,
+        "text": "I mean, a kind of crazy bet.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_163",
+        "start": 721.584,
+        "end": 724.126,
+        "text": "You made some money from the sale of PayPal.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_164",
+        "start": 726.402,
+        "end": 728.704,
+        "text": "You decided to build a space company.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_165",
+        "start": 728.804,
+        "end": 730.565,
+        "text": "Why on earth would someone do that?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_166",
+        "start": 733.107,
+        "end": 734.028,
+        "text": "Got that question a lot.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_167",
+        "start": 734.128,
+        "end": 736.29,
+        "text": "That's true.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_168",
+        "start": 736.75,
+        "end": 740.833,
+        "text": "Did you hear the joke about the guy who made a small fortune in the space industry?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_169",
+        "start": 740.853,
+        "end": 743.675,
+        "text": "And obviously, he started with the large one as the punch line.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_170",
+        "start": 744.316,
+        "end": 749.98,
+        "text": "And so I tell people, well, I was trying to figure out the fastest way to turn a large fortune into a small one.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_171",
+        "start": 750.16,
+        "end": 751.742,
+        "text": "And they'd look at me like, oh, is he serious?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_172",
+        "start": 753.663,
+        "end": 755.084,
+        "text": "And strangely, you were.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_173",
+        "start": 756.585,
+        "end": 758.467,
+        "text": "So what happened?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_174",
+        "start": 758.907,
+        "end": 759.788,
+        "text": "It was a close call.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_175",
+        "start": 759.808,
+        "end": 761.189,
+        "text": "I mean, things almost didn't work out.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_176",
+        "start": 761.669,
+        "end": 762.81,
+        "text": "We came very close to failure.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_177",
+        "start": 763.21,
+        "end": 765.792,
+        "text": "But we managed to get through that point in 2008.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_178",
+        "start": 766.653,
+        "end": 780.183,
+        "text": "The goal of SpaceX is to try to advance rocket technology, and in particular, to try to crack a problem that I think is vital for humanity to become a space-faring civilization, which is to have a rapidly",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_179",
+        "start": 780.943,
+        "end": 782.184,
+        "text": "and fully reusable rocket.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_180",
+        "start": 782.825,
+        "end": 785.767,
+        "text": "Would humanity become a space-faring civilization?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_181",
+        "start": 785.887,
+        "end": 792.854,
+        "text": "So that was a dream of yours in a way from a young age, or like you've dreamed of Mars and beyond?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_182",
+        "start": 793.774,
+        "end": 796.857,
+        "text": "I did build rockets when I was a kid, but I didn't think I'd be involved in this.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_183",
+        "start": 796.897,
+        "end": 805.405,
+        "text": "It was really more from the standpoint of what are the things that need to happen in order for the future to be an exciting and inspiring one.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_184",
+        "start": 807.413,
+        "end": 817.056,
+        "text": "I really think there's a fundamental difference, if you look into the future, between a humanity that is a space-faring civilization that's out there exploring the stars on multiple planets.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_185",
+        "start": 817.677,
+        "end": 819.077,
+        "text": "And I think that's really exciting.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_186",
+        "start": 819.257,
+        "end": 824.959,
+        "text": "And compared with one where we are forever confined to Earth until some eventual extinction event.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_187",
+        "start": 825.219,
+        "end": 830.261,
+        "text": "So you've somehow slashed the cost of building a rocket by 75%, depending on how you calculate it.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_188",
+        "start": 830.521,
+        "end": 831.742,
+        "text": "How on Earth have you done that?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_189",
+        "start": 832.762,
+        "end": 834.122,
+        "text": "NASA has been doing this for years.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_190",
+        "start": 834.163,
+        "end": 835.183,
+        "text": "How have you done this?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_191",
+        "start": 836.556,
+        "end": 844.003,
+        "text": "Well, we've made significant advances in the technology of the airframe, the engines, the electronics, and the launch operation.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_192",
+        "start": 844.363,
+        "end": 857.776,
+        "text": "I mean, there's a long list of innovations that we've come up with there that are a little difficult to communicate in this talk, but... Not least because you could still get copied, right?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_193",
+        "start": 858.016,
+        "end": 859.938,
+        "text": "I mean, you haven't patented this stuff.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_194",
+        "start": 859.998,
+        "end": 860.919,
+        "text": "It's really interesting to me.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_195",
+        "start": 860.959,
+        "end": 861.86,
+        "text": "No, intentionally you don't patent.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_196",
+        "start": 862.24,
+        "end": 864.662,
+        "text": "you think it's more dangerous to patent than not to patent?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_197",
+        "start": 865.823,
+        "end": 871.006,
+        "text": "Since our primary competitors are national governments, the enforceability of patents is questionable.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_198",
+        "start": 872.587,
+        "end": 877.011,
+        "text": "It's really, really, really interesting.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_199",
+        "start": 877.031,
+        "end": 880.233,
+        "text": "But the big innovation is still ahead, and you're working on it now.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_200",
+        "start": 880.253,
+        "end": 881.093,
+        "text": "Tell us about this.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_201",
+        "start": 881.694,
+        "end": 881.914,
+        "text": "Right.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_202",
+        "start": 882.074,
+        "end": 883.355,
+        "text": "So the big innovation...",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_203",
+        "start": 883.435,
+        "end": 887.738,
+        "text": "In fact, let's roll that video, and you can talk us through it, what's happening here.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_204",
+        "start": 887.778,
+        "end": 888.198,
+        "text": "Absolutely.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_205",
+        "start": 888.679,
+        "end": 891.441,
+        "text": "So the thing about Rockets is that",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_206",
+        "start": 892.242,
+        "end": 893.223,
+        "text": "They're all expendable.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_207",
+        "start": 893.303,
+        "end": 895.105,
+        "text": "All rockets that fly today are fully expendable.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_208",
+        "start": 895.466,
+        "end": 900.472,
+        "text": "The space shuttle was an attempt at a reusable rocket, but even the main tank of the space shuttle was thrown away every time.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_209",
+        "start": 900.892,
+        "end": 907.601,
+        "text": "And the parts that were reusable took a 10,000-person group nine months to refurbish for flight.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_210",
+        "start": 908.021,
+        "end": 910.444,
+        "text": "So the space shuttle ended up costing a billion dollars per flight.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_211",
+        "start": 911.645,
+        "end": 913.647,
+        "text": "Obviously that doesn't work very well for...",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_212",
+        "start": 913.687,
+        "end": 914.608,
+        "text": "So what just happened there?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_213",
+        "start": 915.109,
+        "end": 916.21,
+        "text": "We just saw something land?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_214",
+        "start": 916.811,
+        "end": 917.211,
+        "text": "That's right.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_215",
+        "start": 917.311,
+        "end": 926.922,
+        "text": "So it's important that the rocket stages be able to come back, to be able to return to the launch site and be ready to launch again within a matter of hours.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_216",
+        "start": 927.663,
+        "end": 928.604,
+        "text": "Wow.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_217",
+        "start": 928.924,
+        "end": 930.125,
+        "text": "Reusable rockets.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_218",
+        "start": 930.166,
+        "end": 930.306,
+        "text": "Yes.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_219",
+        "start": 932.483,
+        "end": 937.926,
+        "text": "And so what a lot of people are going to realize is the cost of the fuel of the propellant is very small.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_220",
+        "start": 937.986,
+        "end": 939.227,
+        "text": "It's much like on a jet.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_221",
+        "start": 939.547,
+        "end": 944.11,
+        "text": "So the cost of the propellant is about 0.3% of the cost of the rocket.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_222",
+        "start": 945.19,
+        "end": 952.615,
+        "text": "So it's possible to achieve, let's say, roughly 100-fold improvement in the cost of space flight if you can effectively reuse the rocket.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_223",
+        "start": 953.395,
+        "end": 954.577,
+        "text": "That's why it's so important.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_224",
+        "start": 954.637,
+        "end": 961.266,
+        "text": "Every mode of transport that we use, whether it's planes, trains, automobiles, bikes, horses, is reusable, but not rockets.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_225",
+        "start": 961.927,
+        "end": 964.811,
+        "text": "So we must solve this problem in order to become a space-faring civilization.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_226",
+        "start": 965.492,
+        "end": 968.076,
+        "text": "You asked me the question earlier of how popular",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_227",
+        "start": 969.205,
+        "end": 971.587,
+        "text": "traveling on cruises would be if you had to burn your ship.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_228",
+        "start": 971.608,
+        "end": 977.994,
+        "text": "Certain cruises are apparently highly problematic.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_229",
+        "start": 978.114,
+        "end": 978.815,
+        "text": "More expensive.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_230",
+        "start": 978.855,
+        "end": 986.222,
+        "text": "So that's potentially absolutely disruptive technology and I guess paves the way for your dream to actually take",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_231",
+        "start": 987.672,
+        "end": 990.554,
+        "text": "at some point to take humanity to Mars at scale?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_232",
+        "start": 991.294,
+        "end": 994.916,
+        "text": "Yeah, exactly.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_233",
+        "start": 995.016,
+        "end": 1004.442,
+        "text": "SpaceX or some combination of companies and governments need to make progress in the direction of making life multi-planetary, of establishing a base",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_234",
+        "start": 1005.182,
+        "end": 1012.472,
+        "text": "on another planet, on Mars being the only realistic option, and then building that base up until we have a true multi-planet species.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_235",
+        "start": 1012.852,
+        "end": 1016.237,
+        "text": "So progress on this, let's make it reusable.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_236",
+        "start": 1016.337,
+        "end": 1016.898,
+        "text": "How is that going?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_237",
+        "start": 1016.918,
+        "end": 1019.722,
+        "text": "That was just a simulation video we saw.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_238",
+        "start": 1019.762,
+        "end": 1020.282,
+        "text": "How's it going?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_239",
+        "start": 1021.083,
+        "end": 1033.111,
+        "text": "We've been making some good progress recently with something we call the Grasshopper test project, where we're testing the vertical landing portion of the flight, the sort of terminal portion, which is quite tricky.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_240",
+        "start": 1033.771,
+        "end": 1036.333,
+        "text": "And we've had some good tests.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_241",
+        "start": 1036.493,
+        "end": 1037.233,
+        "text": "Can we see that?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_242",
+        "start": 1037.273,
+        "end": 1038.994,
+        "text": "Yeah.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_243",
+        "start": 1039.014,
+        "end": 1043.217,
+        "text": "Just to give a sense of scale, we dressed the cowboy as Johnny Cash and bolted the mannequin to the rocket.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_244",
+        "start": 1045.994,
+        "end": 1047.376,
+        "text": "All right, let's see that video then.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_245",
+        "start": 1047.677,
+        "end": 1049.6,
+        "text": "Because this is actually amazing when you think about it.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_246",
+        "start": 1049.62,
+        "end": 1050.842,
+        "text": "You've never seen this before.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_247",
+        "start": 1050.982,
+        "end": 1058.194,
+        "text": "A rocket blasting off and then... Yeah, so that rocket is about the size of a 12-story building.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_248",
+        "start": 1071.097,
+        "end": 1082.384,
+        "text": "So now it's hovering at about 40 meters, and it's constantly adjusting the angle of the pitch in your main engine and maintaining roll with the coal gas thrusters.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_249",
+        "start": 1089.968,
+        "end": 1097.193,
+        "text": "How cool is that?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_250",
+        "start": 1099.467,
+        "end": 1100.608,
+        "text": "How have you done this?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_251",
+        "start": 1100.688,
+        "end": 1108.611,
+        "text": "These projects are so... PayPal, SolarCity, Tesla, SpaceX, they're so spectacularly different.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_252",
+        "start": 1108.631,
+        "end": 1111.152,
+        "text": "They're such ambitious projects at scale.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_253",
+        "start": 1111.172,
+        "end": 1116.115,
+        "text": "How on earth has one person been able to innovate in this way?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_254",
+        "start": 1116.175,
+        "end": 1116.875,
+        "text": "What is it about you?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_255",
+        "start": 1118.656,
+        "end": 1119.756,
+        "text": "I don't know, actually.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_256",
+        "start": 1124.134,
+        "end": 1125.255,
+        "text": "I don't have a good answer for you.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_257",
+        "start": 1125.495,
+        "end": 1126.155,
+        "text": "I work a lot.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_258",
+        "start": 1126.455,
+        "end": 1132.098,
+        "text": "Well, I have a theory.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_259",
+        "start": 1132.878,
+        "end": 1138.901,
+        "text": "My theory is that you have an ability to think at a system level of design",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_260",
+        "start": 1139.501,
+        "end": 1166.839,
+        "text": "Pull together design technology and business Ted was TBD design technology business into one package Synthesize it in a way that very few people can and this is a critical thing feel so damn Confident in that click together package that you take crazy risks You bet you bet your fortune on it and you seem to have done that multiple times I mean almost no one can do that.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_261",
+        "start": 1166.939,
+        "end": 1167.239,
+        "text": "Is that",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_262",
+        "start": 1168.439,
+        "end": 1170.1,
+        "text": "Can we have some of that secret source?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_263",
+        "start": 1170.12,
+        "end": 1172.061,
+        "text": "Can we put it into our education system?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_264",
+        "start": 1172.081,
+        "end": 1173.242,
+        "text": "Can someone learn from you?",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_265",
+        "start": 1173.722,
+        "end": 1175.163,
+        "text": "It is truly amazing what you've done.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_266",
+        "start": 1175.543,
+        "end": 1175.804,
+        "text": "Thanks.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_267",
+        "start": 1178.265,
+        "end": 1178.545,
+        "text": "Thank you.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_268",
+        "start": 1178.565,
+        "end": 1181.907,
+        "text": "Well, I do think there's a good framework for thinking.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_269",
+        "start": 1182.107,
+        "end": 1184.649,
+        "text": "It is physics, you know, the sort of first principles reasoning.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_270",
+        "start": 1188.383,
+        "end": 1195.806,
+        "text": "What I mean by that is boil things down to their fundamental truths and reason up from there, as opposed to reasoning by analogy.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_271",
+        "start": 1196.846,
+        "end": 1203.429,
+        "text": "Through most of our life, we get through life by reasoning by analogy, which essentially means kind of copying what other people do with slight variations.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_272",
+        "start": 1204.33,
+        "end": 1206.231,
+        "text": "And you have to do that, otherwise it's...",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_273",
+        "start": 1207.031,
+        "end": 1208.453,
+        "text": "mentally you wouldn't be able to get through the day.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_274",
+        "start": 1209.635,
+        "end": 1215.563,
+        "text": "But when you want to do something new, you have to apply the physics approach.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_275",
+        "start": 1215.603,
+        "end": 1220.41,
+        "text": "Physics is really sort of figuring out how to discover new things that are counterintuitive, like quantum mechanics.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_276",
+        "start": 1220.47,
+        "end": 1221.571,
+        "text": "It's really counterintuitive.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_277",
+        "start": 1222.312,
+        "end": 1224.813,
+        "text": "So I think that's an important thing to do.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_278",
+        "start": 1225.193,
+        "end": 1232.214,
+        "text": "And then also to really pay attention to negative feedback and solicit it, particularly from friends.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_279",
+        "start": 1232.815,
+        "end": 1237.336,
+        "text": "This may sound like sort of simple advice, but hardly anyone does that.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_280",
+        "start": 1237.516,
+        "end": 1239.336,
+        "text": "And it's incredibly helpful.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_281",
+        "start": 1240.436,
+        "end": 1242.817,
+        "text": "Boys and girls watching, study physics.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_282",
+        "start": 1243.337,
+        "end": 1244.177,
+        "text": "Learn from this man.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_283",
+        "start": 1244.577,
+        "end": 1245.978,
+        "text": "Elon Musk, I wish we had all day.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_284",
+        "start": 1245.998,
+        "end": 1247.578,
+        "text": "But thank you so much for coming today.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_285",
+        "start": 1247.598,
+        "end": 1248.078,
+        "text": "Thank you.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_286",
+        "start": 1248.118,
+        "end": 1249.719,
+        "text": "That was awesome.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_287",
+        "start": 1249.779,
+        "end": 1251.159,
+        "text": "That was really, really cool.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_288",
+        "start": 1251.855,
+        "end": 1253.717,
+        "text": "Give it up.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_289",
+        "start": 1253.737,
+        "end": 1256.401,
+        "text": "Just think about it.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_290",
+        "start": 1256.421,
+        "end": 1257.142,
+        "text": "That was fantastic.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_291",
+        "start": 1258.844,
+        "end": 1259.525,
+        "text": "Thank you so much.",
+        "voice": "en",
         "audio_path": null
       }
     ],

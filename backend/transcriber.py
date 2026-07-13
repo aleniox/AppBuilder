@@ -58,7 +58,7 @@ def transcribe_video_background(
             torch.cuda.empty_cache()
 
         align_model, align_metadata = whisperx.load_align_model(
-            language=detected_lang, device=device
+            detected_lang, device
         )
         if align_model is not None and len(segments) > 0:
             result_aligned = whisperx.align(

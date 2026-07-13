@@ -29,6 +29,9 @@ dependencies = [
     "ctranslate2>=4.8.1",
     "faster-whisper>=1.2.1",
     "pyannote-audio>=4.0.7",
+    "nvidia-cublas-cu12>=12.9.2.10",
+    "nvidia-cudnn-cu12>=9.24.0.43",
+    "nltk>=3.10.0",
 ]
 [[tool.uv.index]]
 name = "pytorch-cu130"
