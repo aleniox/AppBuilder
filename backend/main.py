@@ -256,6 +256,16 @@ def get_transcribe_status(video_id: str, task_id: str):
             except Exception:
                 pass
 
+        # Clean up task after returning result
+        from transcriber import _TRANSCRIBE_LOCK
+        with _TRANSCRIBE_LOCK:
+            _TRANSCRIBE_TASKS.pop(task_id, None)
+
+    if task.get("status") in ("failed", "unknown"):
+        from transcriber import _TRANSCRIBE_LOCK
+        with _TRANSCRIBE_LOCK:
+            _TRANSCRIBE_TASKS.pop(task_id, None)
+
     return result
 
 
@@ -448,7 +458,7 @@ def render_voice_only(video_id: str, background_tasks: BackgroundTasks):
 
 
 @app.get("/api/download/{filename}")
-def download_file(filename: str, request: Request, range: Optional[str] = Header(None)):
+def download_file(filename: str, request: Request):
     filepath = OUTPUT_DIR / filename
     if not filepath.exists():
         filepath = UPLOAD_DIR / filename
@@ -474,51 +484,16 @@ def download_file(filename: str, request: Request, range: Optional[str] = Header
     ext = Path(filename).suffix.lower()
     content_type = _MIME_MAP.get(ext, "application/octet-stream")
 
-    # Range requests are essential for video streaming (seeking and loading in Chrome/Safari)
-    if range and filename.lower().endswith((".mp4", ".webm", ".avi", ".mov", ".mkv", ".mp3", ".wav", ".ogg", ".m4a")):
-        range_str = range.replace("bytes=", "")
-        try:
-            start_str, end_str = range_str.split("-")
-            start = int(start_str) if start_str else 0
-            end = int(end_str) if end_str else file_size - 1
-        except ValueError:
-            raise HTTPException(416, "Requested range not satisfiable")
-
-        if start > end or start >= file_size:
-            raise HTTPException(416, "Requested range not satisfiable")
-
-        end = min(end, file_size - 1)
-        chunk_size = 1024 * 1024  # 1MB chunks
-
-        def file_generator():
-            try:
-                with open(filepath, "rb") as f:
-                    f.seek(start)
-                    pos = start
-                    while pos <= end:
-                        read_len = min(chunk_size, end - pos + 1)
-                        data = f.read(read_len)
-                        if not data:
-                            break
-                        pos += len(data)
-                        yield data
-            except GeneratorExit:
-                pass
-
-        headers = {
-            "Content-Range": f"bytes {start}-{end}/{file_size}",
-            "Accept-Ranges": "bytes",
-            "Content-Length": str(end - start + 1),
-            "Content-Type": content_type,
+    return FileResponse(
+        path=str(filepath), 
+        filename=filename, 
+        media_type=content_type, 
+        headers={
             "ETag": etag,
             "Cache-Control": "public, max-age=31536000, immutable",
+            "Accept-Ranges": "bytes"
         }
-        return StreamingResponse(file_generator(), status_code=206, headers=headers)
-
-    return FileResponse(str(filepath), filename=filename, media_type=content_type, headers={
-        "ETag": etag,
-        "Cache-Control": "public, max-age=31536000, immutable",
-    })
+    )
 
 
 @app.delete("/api/video/{video_id}")

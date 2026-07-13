@@ -1,127 +1,22 @@
 {
-  "dac31b33": {
-    "id": "dac31b33",
-    "filename": "dac31b33.mp4",
-    "original_name": "0520(1)_inserted.mp4",
-    "path": "uploads\\dac31b33.mp4",
-    "duration": 791.46,
+  "0416bb49": {
+    "id": "0416bb49",
+    "filename": "0416bb49.mp4",
+    "original_name": "The mind behind Tesla, SpaceX, SolarCity ... | Elon Musk",
+    "path": "uploads\\0416bb49.mp4",
+    "duration": 1265,
+    "youtube_url": "https://www.youtube.com/watch?v=IgKWPdJWuBQ",
     "subtitles": [
       {
         "id": "sub_1",
-        "start": 0.0,
-        "end": 3.0,
-        "text": "Chào các bạn đã ghé thăm kênh của mình và bây giờ chúng ta bắt đầu ván đấu ngay bây giờ",
-        "voice": "vi"
-      },
-      {
-        "id": "sub_2",
-        "start": 309.06,
-        "end": 312.66,
-        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
-        "voice": "vi"
-      }
-    ],
-    "voice_enabled": true,
-    "voice_lang": "vi",
-    "inserted_clips": [
-      {
-        "start": 134.71,
-        "duration": 10.080000000000041
-      }
-    ]
-  },
-  "3417ccd4": {
-    "id": "3417ccd4",
-    "filename": "del_7e422fe1.mp4",
-    "original_name": "0520(1)_inserted_inserted_deleted_deleted.mp4",
-    "path": "uploads\\del_7e422fe1.mp4",
-    "duration": 781.49,
-    "subtitles": [
-      {
-        "id": "sub_1",
-        "start": 0.0,
-        "end": 4.4,
-        "text": "Welcome to my channel, and let's start the match right now",
-        "voice": "vi"
-      },
-      {
-        "id": "sub_2",
-        "start": 298.98,
-        "end": 302.58,
-        "text": "Tại đây tôi muốn đấm nhau với Đạt Hùng",
-        "voice": "vi"
-      }
-    ],
-    "voice_enabled": true,
-    "voice_lang": "vi",
-    "inserted_clips": [],
-    "render_status": "completed",
-    "render_progress": 100,
-    "render_error": null,
-    "output": "output_3417ccd4.mp4",
-    "ref_audio_path": "ref_audio\\ref_3417ccd4.mp3"
-  },
-  "4282ae60": {
-    "id": "4282ae60",
-    "filename": "4282ae60.mp4",
-    "original_name": "2026-07-05 13-51-17.mp4",
-    "path": "uploads\\4282ae60.mp4",
-    "duration": 2.38
-  },
-  "7965925b": {
-    "id": "7965925b",
-    "filename": "7965925b.mp4",
-    "original_name": "ACPhoenix 2026-07-05 10-13-55.mp4",
-    "path": "uploads\\7965925b.mp4",
-    "duration": 696.57
-  },
-  "e6ad24d0": {
-    "id": "e6ad24d0",
-    "filename": "e6ad24d0.mp4",
-    "original_name": "ACPhoenix 2026-07-05 10-13-55_inserted.mp4",
-    "path": "uploads\\e6ad24d0.mp4",
-    "duration": 3302.19,
-    "subtitles": [],
-    "voice_enabled": true,
-    "voice_lang": "vi",
-    "inserted_clips": [
-      {
-        "start": 696.57,
-        "duration": 2605.62
-      }
-    ]
-  },
-  "813851b4": {
-    "id": "813851b4",
-    "filename": "del_79ef0454.mp4",
-    "original_name": "ACPhoenix 2026-07-05 10-13-55_inserted_inserted_deleted_deleted.mp4",
-    "path": "uploads\\del_79ef0454.mp4",
-    "duration": 982.99,
-    "subtitles": [
-      {
-        "id": "sub_1",
-        "start": 1.66,
-        "end": 7.66,
-        "text": "Xin chào các con vợ nhé, bây giờ chúng ta sẽ bắt đầu trận đấu.",
+        "start": 202.5,
+        "end": 300.0,
+        "text": "hihi\n",
         "voice": "vi",
-        "audio_path": "sub_audio_813851b4_sub_1.wav"
-      },
-      {
-        "id": "sub_2",
-        "start": 61.95,
-        "end": 65.15,
-        "text": "mạng nó như cứt nhưng không sao á ",
-        "voice": "vi",
-        "audio_path": "sub_audio_813851b4_sub_2.wav"
+        "audio_path": null
       }
     ],
     "voice_enabled": true,
-    "voice_lang": "vi",
-    "inserted_clips": [],
-    "ref_audio_path": "ref_audio\\ref_813851b4.mp3",
-    "render_status": "completed",
-    "render_progress": 100,
-    "render_error": null,
-    "output": "output_813851b4.mp4"
+    "voice_lang": "vi"
   }
 }

@@ -25,6 +25,9 @@ dependencies = [
     "soxr>=1.1.0",
     "transformers>=4.56.2",
     "xformers>=0.0.35",
+    "yt-dlp>=2026.7.4",
+    "ctranslate2>=4.8.1",
+    "faster-whisper>=1.2.1",
 ]
 [[tool.uv.index]]
 name = "pytorch-cu130"

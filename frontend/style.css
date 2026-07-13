@@ -341,7 +341,7 @@ select:focus {
   position: relative;
   background: #000;
   border-radius: 12px;
-  overflow: visible;
+  overflow: hidden;
   aspect-ratio: 16/9;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -773,7 +773,8 @@ select:focus {
 
 .video-subtitle-overlay {
   position: absolute;
-  bottom: 8%;
+  bottom: 15%;
+  max-height: 25%;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.85);
@@ -1897,7 +1898,7 @@ select:focus {
 
 .youtube-right {
   position: sticky;
-  top: 90px;
+  top: 104px;
 }
 
 .youtube-input-row {

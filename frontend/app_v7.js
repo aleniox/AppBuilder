@@ -1,4 +1,4 @@
-console.log("app.js loaded. Version: 1.0.7");
+console.log("app.js loaded. Version: 1.1.0 (YouTube + WhisperX)");
 const API = 'http://localhost:8000';
 let currentVideoId = null;
 let subtitles = [];
@@ -914,12 +914,18 @@ function setupTimelineEvents() {
   if (!visualTimeline) return;
 
   function seekFromEvent(e) {
-    if (!videoPlayer.duration) return;
+    console.log("Timeline clicked! Duration:", videoPlayer.duration, "Current:", videoPlayer.currentTime);
+    if (!videoPlayer.duration || videoPlayer.duration === Infinity) {
+      console.warn("Video has no valid duration!");
+      alert("Lỗi: Video chưa tải xong thời lượng (Duration: " + videoPlayer.duration + ")");
+      return;
+    }
     const rect = visualTimeline.getBoundingClientRect();
     let x = e.clientX - rect.left;
     if (x < 0) x = 0;
     if (x > rect.width) x = rect.width;
     const ratio = x / rect.width;
+    console.log("Seeking to ratio:", ratio, "Target time:", ratio * videoPlayer.duration);
     videoPlayer.currentTime = ratio * videoPlayer.duration;
   }
 
@@ -1031,9 +1037,10 @@ function addSubtitleAtTime(time, text) {
     t = videoPlayer ? videoPlayer.currentTime : 0;
   }
   const roundedStart = Math.round(t * 100) / 100;
-  const duration = 3.0; // default 3s subtitle duration
+  const duration = 3.0;
   const maxDur = (videoPlayer && videoPlayer.duration) ? videoPlayer.duration : (roundedStart + 3.0);
   const roundedEnd = Math.round(Math.min(roundedStart + duration, maxDur) * 100) / 100;
+  addSubtitle(roundedStart, roundedEnd, text);
 }
 
 // ===== Settings & Translate =====
@@ -1345,17 +1352,34 @@ btnYoutubeTranscribe.addEventListener('click', async () => {
     youtubeTranscribeTaskId = task_id;
 
     // Poll for completion
+    let pollAttempts = 0;
+    const MAX_POLL_ATTEMPTS = 600;
     const pollInterval = setInterval(async () => {
+      pollAttempts++;
       try {
+        if (pollAttempts > MAX_POLL_ATTEMPTS) {
+          clearInterval(pollInterval);
+          youtubeTranscribeText.textContent = 'Lỗi: Quá thời gian chờ';
+          youtubeTranscribeText.className = 'error-text';
+          btnYoutubeTranscribe.disabled = false;
+          setTimeout(() => { youtubeTranscribeProgress.style.display = 'none'; }, 3000);
+          return;
+        }
+
         const statusRes = await fetch(`${API}/api/video/${youtubeVideoId}/transcribe-status?task_id=${task_id}`);
         if (!statusRes.ok) {
           clearInterval(pollInterval);
-          throw new Error(`HTTP ${statusRes.status}`);
+          youtubeTranscribeText.textContent = 'Lỗi: ' + `HTTP ${statusRes.status}`;
+          youtubeTranscribeText.className = 'error-text';
+          btnYoutubeTranscribe.disabled = false;
+          setTimeout(() => { youtubeTranscribeProgress.style.display = 'none'; }, 3000);
+          return;
         }
         const data = await statusRes.json();
 
-        youtubeTranscribeFill.style.width = `${data.progress}%`;
-        youtubeTranscribeText.textContent = data.message || `Đang tạo phụ đề... ${data.progress}%`;
+        const progressVal = data.progress != null ? data.progress : 0;
+        youtubeTranscribeFill.style.width = `${progressVal}%`;
+        youtubeTranscribeText.textContent = data.message || `Đang tạo phụ đề... ${progressVal}%`;
 
         if (data.status === 'completed') {
           clearInterval(pollInterval);
@@ -1363,7 +1387,6 @@ btnYoutubeTranscribe.addEventListener('click', async () => {
           youtubeTranscribeText.textContent = 'Hoàn tất!';
           btnYoutubeTranscribe.disabled = false;
 
-          // Show subtitle preview
           if (data.subtitles && data.subtitles.length > 0) {
             youtubeSubtitlesCard.style.display = 'block';
             youtubeSubCount.textContent = `${data.subtitles.length} phụ đề`;
@@ -1385,10 +1408,15 @@ btnYoutubeTranscribe.addEventListener('click', async () => {
           youtubeTranscribeText.textContent = 'Lỗi: ' + (data.error || 'Lỗi không xác định');
           youtubeTranscribeText.className = 'error-text';
           btnYoutubeTranscribe.disabled = false;
+          setTimeout(() => { youtubeTranscribeProgress.style.display = 'none'; }, 3000);
         }
       } catch (err) {
         clearInterval(pollInterval);
-        throw err;
+        console.error('Poll error:', err);
+        youtubeTranscribeText.textContent = 'Lỗi kết nối: ' + err.message;
+        youtubeTranscribeText.className = 'error-text';
+        btnYoutubeTranscribe.disabled = false;
+        setTimeout(() => { youtubeTranscribeProgress.style.display = 'none'; }, 3000);
       }
     }, 1000);
 
@@ -1406,6 +1434,8 @@ btnYoutubeEditor.addEventListener('click', () => {
     alert('Chưa có video nào.');
     return;
   }
+  navYoutube.classList.remove('active');
+  navVideoEditor.classList.add('active');
   selectVideo(youtubeVideoId);
 });
 
@@ -1556,17 +1586,34 @@ btnTtsGenerate.addEventListener('click', async () => {
       throw new Error(errData.detail || `HTTP ${res.status}`);
     }
     const { task_id } = await res.json();
-    let pollInterval = setInterval(async () => {
+    let pollAttempts = 0;
+    const MAX_POLL_ATTEMPTS = 600;
+    const pollInterval = setInterval(async () => {
+      pollAttempts++;
       try {
+        if (pollAttempts > MAX_POLL_ATTEMPTS) {
+          clearInterval(pollInterval);
+          ttsProgressText.textContent = 'Lỗi: Quá thời gian chờ';
+          ttsProgressText.className = 'error-text';
+          ttsProgressFill.style.width = '0%';
+          btnTtsGenerate.disabled = false;
+          return;
+        }
+
         const statusRes = await fetch(`${API}/api/tts/synthesize/${task_id}/status`);
         if (!statusRes.ok) {
           clearInterval(pollInterval);
-          throw new Error(`HTTP ${statusRes.status}`);
+          ttsProgressText.textContent = 'Lỗi: ' + `HTTP ${statusRes.status}`;
+          ttsProgressText.className = 'error-text';
+          ttsProgressFill.style.width = '0%';
+          btnTtsGenerate.disabled = false;
+          return;
         }
         const data = await statusRes.json();
         if (data.status === "processing") {
-          ttsProgressFill.style.width = `${data.progress}%`;
-          ttsProgressText.textContent = `Đang tạo giọng nói... ${data.progress}%`;
+          const pct = data.progress != null ? data.progress : 0;
+          ttsProgressFill.style.width = `${pct}%`;
+          ttsProgressText.textContent = `Đang tạo giọng nói... ${pct}%`;
         } else if (data.status === "completed") {
           clearInterval(pollInterval);
           ttsProgressFill.style.width = '100%';
@@ -1577,15 +1624,21 @@ btnTtsGenerate.addEventListener('click', async () => {
           ttsDownloadLink.href = audioUrl;
           showEl(ttsResult);
           hideEl(ttsProgress);
+          btnTtsGenerate.disabled = false;
         } else if (data.status === "failed") {
           clearInterval(pollInterval);
           ttsProgressText.textContent = 'Lỗi: ' + (data.error || 'Lỗi không xác định');
           ttsProgressText.className = 'error-text';
           ttsProgressFill.style.width = '0%';
+          btnTtsGenerate.disabled = false;
         }
       } catch (err) {
         clearInterval(pollInterval);
-        throw err;
+        console.error('TTS poll error:', err);
+        ttsProgressText.textContent = 'Lỗi kết nối: ' + err.message;
+        ttsProgressText.className = 'error-text';
+        ttsProgressFill.style.width = '0%';
+        btnTtsGenerate.disabled = false;
       }
     }, 500);
   } catch (err) {
@@ -1593,7 +1646,6 @@ btnTtsGenerate.addEventListener('click', async () => {
     ttsProgressText.textContent = 'Lỗi: ' + err.message;
     ttsProgressText.className = 'error-text';
     ttsProgressFill.style.width = '0%';
-  } finally {
     btnTtsGenerate.disabled = false;
   }
 });
