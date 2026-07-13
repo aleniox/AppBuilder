@@ -17,14 +17,14 @@ def main():
     sys.path.insert(0, str(backend_dir))
     
     # 2. Open the frontend in the browser
-    print("Opening frontend in browser: http://localhost:8000/")
-    webbrowser.open("http://localhost:8000/")
+    print("Opening frontend in browser: http://localhost:9090/")
+    webbrowser.open("http://localhost:9090/")
         
     # 3. Start the backend server
-    print("Starting backend server on http://localhost:8000...")
+    print("Starting backend server on http://localhost:9090...")
     try:
         from main import app
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        uvicorn.run(app, host="0.0.0.0", port=9090)
     except ImportError as e:
         print(f"Error importing backend app: {e}")
         print("Please ensure dependencies are installed via 'uv sync'")

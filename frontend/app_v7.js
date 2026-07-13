@@ -1,5 +1,5 @@
 console.log("app.js loaded. Version: 1.1.0 (YouTube + WhisperX)");
-const API = 'http://localhost:8000';
+const API = 'http://localhost:9090';
 let currentVideoId = null;
 let subtitles = [];
 let subCounter = 0;

@@ -33,6 +33,14 @@ if sys.platform == 'win32':
         if _bin.is_dir():
             os.environ["PATH"] = str(_bin) + os.pathsep + os.environ["PATH"]
 
+import tempfile
+
+TEMP_DIR = Path(tempfile.gettempdir()) / "video-editor-transcribe"
+TEMP_DIR.mkdir(exist_ok=True)
+for f in TEMP_DIR.glob("__temp_transcribe_*.wav"):
+    try: f.unlink()
+    except: pass
+
 modules_dir = Path(__file__).parent.parent / "modules"
 if str(modules_dir) not in sys.path:
     sys.path.insert(0, str(modules_dir))
@@ -198,7 +206,7 @@ def transcribe_video(video_id: str, background_tasks: BackgroundTasks, language:
         raise HTTPException(400, "Video file not found")
 
     # Extract audio to temp file
-    temp_audio = f"__temp_transcribe_{uuid.uuid4().hex[:8]}.wav"
+    temp_audio = str(TEMP_DIR / f"__temp_transcribe_{uuid.uuid4().hex[:8]}.wav")
     try:
         from moviepy.editor import VideoFileClip
         clip = VideoFileClip(video_path)
@@ -629,7 +637,6 @@ def _init_tts_engine():
 
 def _ensure_ref_audio(video_id: str = None):
     global _tts_engine, _tts_last_used
-    _tts_loaded.wait()
     with _TTS_LOCK:
         if _tts_engine is None:
             from sparktts_infer import get_engine
@@ -968,4 +975,4 @@ if frontend_dir.exists():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=9090)
