@@ -1207,6 +1207,209 @@ window.translateSub = async function(idx) {
 };
 
 // ==========================================================================
+// YOUTUBE TAB
+// ==========================================================================
+const navYoutube = document.getElementById('nav-youtube');
+const youtubeScreen = document.getElementById('youtube-screen');
+const youtubeUrl = document.getElementById('youtube-url');
+const btnYoutubeDownload = document.getElementById('btn-youtube-download');
+const youtubeProgress = document.getElementById('youtube-progress');
+const youtubeProgressText = document.getElementById('youtube-progress-text');
+const youtubeProgressPct = document.getElementById('youtube-progress-pct');
+const youtubeProgressFill = document.getElementById('youtube-progress-fill');
+const youtubeInfo = document.getElementById('youtube-info');
+const youtubeTitle = document.getElementById('youtube-title');
+const youtubeDuration = document.getElementById('youtube-duration');
+const youtubeActions = document.getElementById('youtube-actions');
+const btnYoutubeTranscribe = document.getElementById('btn-youtube-transcribe');
+const btnYoutubeEditor = document.getElementById('btn-youtube-editor');
+const youtubePreview = document.getElementById('youtube-preview');
+const youtubePreviewPlaceholder = document.getElementById('youtube-preview-placeholder');
+const youtubeTranscribeProgress = document.getElementById('youtube-transcribe-progress');
+const youtubeTranscribeText = document.getElementById('youtube-transcribe-text');
+const youtubeTranscribeFill = document.getElementById('youtube-transcribe-fill');
+const youtubeSubtitlesCard = document.getElementById('youtube-subtitles-card');
+const youtubeSubtitlePreview = document.getElementById('youtube-subtitle-preview');
+const youtubeSubCount = document.getElementById('youtube-sub-count');
+
+let youtubeVideoId = null;
+let youtubeTranscribeTaskId = null;
+
+function showYouTubeScreen() {
+  navYoutube.classList.add('active');
+  navVideoEditor.classList.remove('active');
+  navTts.classList.remove('active');
+  navMusic.classList.remove('active');
+  startScreen.style.display = 'none';
+  workspaceScreen.style.display = 'none';
+  ttsScreen.style.display = 'none';
+  musicScreen.style.display = 'none';
+  youtubeScreen.style.display = '';
+}
+
+navYoutube.addEventListener('click', showYouTubeScreen);
+
+// YouTube download
+btnYoutubeDownload.addEventListener('click', async () => {
+  const url = youtubeUrl.value.trim();
+  if (!url) {
+    alert('Vui lòng nhập link YouTube');
+    return;
+  }
+
+  btnYoutubeDownload.disabled = true;
+  btnYoutubeDownload.textContent = 'Đang tải...';
+  youtubeProgress.style.display = 'block';
+  youtubeProgressText.textContent = 'Đang tải video...';
+  youtubeProgressPct.textContent = '0%';
+  youtubeProgressFill.style.width = '0%';
+  youtubeInfo.style.display = 'none';
+  youtubeActions.style.display = 'none';
+  youtubeSubtitlesCard.style.display = 'none';
+  youtubePreviewPlaceholder.style.display = 'flex';
+  youtubePreview.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('url', url);
+
+  try {
+    const res = await fetch(`${API}/api/youtube-download`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    youtubeVideoId = data.id;
+
+    youtubeProgressFill.style.width = '100%';
+    youtubeProgressPct.textContent = '100%';
+    youtubeProgressText.textContent = 'Tải xuống thành công!';
+
+    // Show info
+    youtubeInfo.style.display = 'block';
+    youtubeTitle.textContent = data.title || 'Untitled';
+    youtubeDuration.textContent = fmtDuration(data.duration);
+
+    // Show preview
+    const videoUrl = `${API}/api/download/${data.filename}`;
+    youtubePreview.src = videoUrl;
+    youtubePreview.load();
+    youtubePreview.style.display = 'block';
+    youtubePreviewPlaceholder.style.display = 'none';
+
+    youtubeActions.style.display = 'flex';
+    btnYoutubeDownload.disabled = false;
+    btnYoutubeDownload.textContent = 'Tải xuống';
+
+    setTimeout(() => {
+      youtubeProgress.style.display = 'none';
+    }, 2000);
+
+  } catch (err) {
+    console.error('YouTube download error:', err);
+    youtubeProgressText.textContent = 'Lỗi: ' + err.message;
+    youtubeProgressText.className = 'error-text';
+    btnYoutubeDownload.disabled = false;
+    btnYoutubeDownload.textContent = 'Tải xuống';
+  }
+});
+
+// Auto-transcribe
+btnYoutubeTranscribe.addEventListener('click', async () => {
+  if (!youtubeVideoId) {
+    alert('Chưa có video nào. Vui lòng tải video trước.');
+    return;
+  }
+
+  btnYoutubeTranscribe.disabled = true;
+  youtubeTranscribeProgress.style.display = 'block';
+  youtubeTranscribeText.textContent = 'Đang tạo phụ đề...';
+  youtubeTranscribeFill.style.width = '0%';
+
+  try {
+    const res = await fetch(`${API}/api/video/${youtubeVideoId}/transcribe`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const { task_id } = await res.json();
+    youtubeTranscribeTaskId = task_id;
+
+    // Poll for completion
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await fetch(`${API}/api/video/${youtubeVideoId}/transcribe-status?task_id=${task_id}`);
+        if (!statusRes.ok) {
+          clearInterval(pollInterval);
+          throw new Error(`HTTP ${statusRes.status}`);
+        }
+        const data = await statusRes.json();
+
+        youtubeTranscribeFill.style.width = `${data.progress}%`;
+        youtubeTranscribeText.textContent = data.message || `Đang tạo phụ đề... ${data.progress}%`;
+
+        if (data.status === 'completed') {
+          clearInterval(pollInterval);
+          youtubeTranscribeFill.style.width = '100%';
+          youtubeTranscribeText.textContent = 'Hoàn tất!';
+          btnYoutubeTranscribe.disabled = false;
+
+          // Show subtitle preview
+          if (data.subtitles && data.subtitles.length > 0) {
+            youtubeSubtitlesCard.style.display = 'block';
+            youtubeSubCount.textContent = `${data.subtitles.length} phụ đề`;
+
+            youtubeSubtitlePreview.innerHTML = data.subtitles.map(sub => `
+              <div class="youtube-sub-item">
+                <span class="youtube-sub-time">${fmtDuration(sub.start)} - ${fmtDuration(sub.end)}</span>
+                <span class="youtube-sub-text">${escHtml(sub.text)}</span>
+              </div>
+            `).join('');
+          }
+
+          setTimeout(() => {
+            youtubeTranscribeProgress.style.display = 'none';
+          }, 2000);
+
+        } else if (data.status === 'failed') {
+          clearInterval(pollInterval);
+          youtubeTranscribeText.textContent = 'Lỗi: ' + (data.error || 'Lỗi không xác định');
+          youtubeTranscribeText.className = 'error-text';
+          btnYoutubeTranscribe.disabled = false;
+        }
+      } catch (err) {
+        clearInterval(pollInterval);
+        throw err;
+      }
+    }, 1000);
+
+  } catch (err) {
+    console.error('Transcribe error:', err);
+    youtubeTranscribeText.textContent = 'Lỗi: ' + err.message;
+    youtubeTranscribeText.className = 'error-text';
+    btnYoutubeTranscribe.disabled = false;
+  }
+});
+
+// Open in editor
+btnYoutubeEditor.addEventListener('click', () => {
+  if (!youtubeVideoId) {
+    alert('Chưa có video nào.');
+    return;
+  }
+  selectVideo(youtubeVideoId);
+});
+
+// ==========================================================================
 // TTS TAB
 // ==========================================================================
 const navVideoEditor = document.getElementById('nav-video-editor');
@@ -1234,7 +1437,11 @@ const ttsDownloadLink = document.getElementById('tts-download-link');
 function showVideoEditorScreen() {
   navVideoEditor.classList.add('active');
   navTts.classList.remove('active');
+  navYoutube.classList.remove('active');
+  navMusic.classList.remove('active');
   ttsScreen.style.display = 'none';
+  musicScreen.style.display = 'none';
+  youtubeScreen.style.display = 'none';
   startScreen.style.display = '';
   workspaceScreen.style.display = 'none';
 }
@@ -1242,8 +1449,12 @@ function showVideoEditorScreen() {
 function showTTSScreen() {
   navTts.classList.add('active');
   navVideoEditor.classList.remove('active');
+  navYoutube.classList.remove('active');
+  navMusic.classList.remove('active');
   startScreen.style.display = 'none';
   workspaceScreen.style.display = 'none';
+  musicScreen.style.display = 'none';
+  youtubeScreen.style.display = 'none';
   ttsScreen.style.display = '';
 }
 
@@ -1469,9 +1680,11 @@ function showMusicScreen() {
   navMusic.classList.add('active');
   navVideoEditor.classList.remove('active');
   navTts.classList.remove('active');
+  navYoutube.classList.remove('active');
   startScreen.style.display = 'none';
   workspaceScreen.style.display = 'none';
   ttsScreen.style.display = 'none';
+  youtubeScreen.style.display = 'none';
   musicScreen.style.display = '';
   if (!musicState.canvasReady) {
     resizeMusicCanvas();
@@ -1481,14 +1694,16 @@ function showMusicScreen() {
   renderMusicThumbnails();
 }
 
-// Update existing show functions to hide music screen
+// Update existing show functions to hide music and youtube screens
 const origShowVideoEditor = showVideoEditorScreen;
 showVideoEditorScreen = function() {
   navVideoEditor.classList.add('active');
   navTts.classList.remove('active');
+  navYoutube.classList.remove('active');
   navMusic.classList.remove('active');
   ttsScreen.style.display = 'none';
   musicScreen.style.display = 'none';
+  youtubeScreen.style.display = 'none';
   startScreen.style.display = '';
   workspaceScreen.style.display = 'none';
 };
@@ -1497,10 +1712,12 @@ const origShowTTS = showTTSScreen;
 showTTSScreen = function() {
   navTts.classList.add('active');
   navVideoEditor.classList.remove('active');
+  navYoutube.classList.remove('active');
   navMusic.classList.remove('active');
   startScreen.style.display = 'none';
   workspaceScreen.style.display = 'none';
   musicScreen.style.display = 'none';
+  youtubeScreen.style.display = 'none';
   ttsScreen.style.display = '';
 };
 

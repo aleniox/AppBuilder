@@ -2,9 +2,9 @@ import os
 import re
 import sys
 from datetime import datetime
-SPARKTTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Spark-TTS")
-if os.path.isdir(SPARKTTS_DIR):
-    sys.path.insert(0, SPARKTTS_DIR)
+# SPARKTTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Spark-TTS")
+# if os.path.isdir(SPARKTTS_DIR):
+#     sys.path.insert(0, SPARKTTS_DIR)
 from tqdm import tqdm
 import numpy as np
 import soundfile as sf

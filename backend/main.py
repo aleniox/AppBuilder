@@ -140,6 +140,125 @@ async def upload_video(file: UploadFile = File(...)):
     return {"id": video_id, "filename": filename, "duration": duration}
 
 
+@app.post("/api/youtube-download")
+async def youtube_download(url: str = Form(...)):
+    import yt_dlp
+    video_id = str(uuid.uuid4())[:8]
+    ext = ".mp4"
+    filename = f"{video_id}{ext}"
+    filepath = UPLOAD_DIR / filename
+
+    ydl_opts = {
+        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "outtmpl": str(filepath),
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "no_warnings": True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            title = info.get("title", "Untitled")
+            duration = info.get("duration", 0)
+    except Exception as e:
+        raise HTTPException(400, f"YouTube download failed: {str(e)}")
+
+    videos_db[video_id] = {
+        "id": video_id,
+        "filename": filename,
+        "original_name": title,
+        "path": str(filepath),
+        "duration": duration,
+        "youtube_url": url,
+    }
+    save_db(videos_db)
+
+    return {"id": video_id, "filename": filename, "duration": duration, "title": title}
+
+
+@app.post("/api/video/{video_id}/transcribe")
+def transcribe_video(video_id: str, background_tasks: BackgroundTasks):
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+
+    video_path = video.get("path")
+    if not video_path or not os.path.isfile(video_path):
+        raise HTTPException(400, "Video file not found")
+
+    # Extract audio to temp file
+    temp_audio = f"__temp_transcribe_{uuid.uuid4().hex[:8]}.wav"
+    try:
+        from moviepy.editor import VideoFileClip
+        clip = VideoFileClip(video_path)
+        clip.audio.write_audiofile(temp_audio, logger=None)
+        clip.close()
+    except Exception as e:
+        raise HTTPException(500, f"Failed to extract audio: {str(e)}")
+
+    task_id = uuid.uuid4().hex[:12]
+
+    from transcriber import _TRANSCRIBE_TASKS, _TRANSCRIBE_LOCK, transcribe_video_background
+    with _TRANSCRIBE_LOCK:
+        _TRANSCRIBE_TASKS[task_id] = {
+            "status": "queued",
+            "progress": 0,
+            "message": "Queued",
+            "subtitles": None,
+            "language": None,
+            "error": None,
+            "video_id": video_id,
+            "temp_audio": temp_audio,
+        }
+
+    background_tasks.add_task(
+        transcribe_video_background,
+        task_id,
+        temp_audio,
+        model_name="medium",
+        language="en",
+    )
+
+    return {"task_id": task_id}
+
+
+@app.get("/api/video/{video_id}/transcribe-status")
+def get_transcribe_status(video_id: str, task_id: str):
+    from transcriber import _TRANSCRIBE_TASKS
+    task = _TRANSCRIBE_TASKS.get(task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+
+    result = {
+        "status": task.get("status", "unknown"),
+        "progress": task.get("progress", 0),
+        "message": task.get("message", ""),
+        "error": task.get("error"),
+    }
+
+    if task.get("status") == "completed":
+        subtitles = task.get("subtitles", [])
+        detected_lang = task.get("language", "en")
+        result["subtitles"] = subtitles
+        result["language"] = detected_lang
+
+        # Save subtitles to project
+        video = videos_db.get(video_id)
+        if video:
+            video["subtitles"] = subtitles
+            save_db(videos_db)
+
+        # Clean up temp audio
+        temp_audio = task.get("temp_audio")
+        if temp_audio and os.path.isfile(temp_audio):
+            try:
+                os.remove(temp_audio)
+            except Exception:
+                pass
+
+    return result
+
+
 @app.get("/api/videos")
 def list_videos():
     return list(videos_db.values())
