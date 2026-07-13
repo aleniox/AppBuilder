@@ -342,8 +342,10 @@ select:focus {
   background: #000;
   border-radius: 12px;
   overflow: hidden;
-  aspect-ratio: 16/9;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .video-wrapper::before {
@@ -358,7 +360,8 @@ select:focus {
 
 #video-player {
   width: 100%;
-  height: 100%;
+  max-height: 65vh;
+  height: auto;
   object-fit: contain;
   border-radius: 12px;
 }
@@ -571,7 +574,7 @@ select:focus {
 
 #subtitle-toolbar {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 16px;
 }

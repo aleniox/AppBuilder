@@ -25,6 +25,7 @@ const subtitleList = document.getElementById('subtitle-list');
 const btnAddSub = document.getElementById('btn-add-sub');
 const btnImportSrt = document.getElementById('btn-import-srt');
 const btnExportSrt = document.getElementById('btn-export-srt');
+const btnStt = document.getElementById('btn-stt');
 const srtInput = document.getElementById('srt-input');
 const btnRender = document.getElementById('btn-render');
 const btnRenderAudio = document.getElementById('btn-render-audio');
@@ -32,6 +33,9 @@ const voiceToggle = document.getElementById('voice-toggle');
 const voiceLang = document.getElementById('voice-lang');
 const progressBar = document.getElementById('progress-bar');
 const progressFill = document.getElementById('progress-fill');
+const sttProgress = document.getElementById('stt-progress');
+const sttText = document.getElementById('stt-text');
+const sttFill = document.getElementById('stt-fill');
 const progressText = document.getElementById('progress-text');
 const downloadArea = document.getElementById('download-area');
 
@@ -268,36 +272,66 @@ videoPlayer.addEventListener('error', (e) => {
   if (videoLoadingOverlay) videoLoadingOverlay.style.display = 'none';
 });
 
+const timelinePlayhead = document.getElementById('timeline-playhead');
+const videoSubtitleOverlay = document.getElementById('video-subtitle-overlay');
+let lastActiveIdx = -1;
+let timeupdateRAF = null;
+
+function findActiveSub(time) {
+  if (!subtitles.length) return -1;
+  let lo = 0, hi = subtitles.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >>> 1;
+    const s = subtitles[mid];
+    if (time < s.start) { hi = mid - 1; }
+    else if (time > s.end) { lo = mid + 1; }
+    else { return mid; }
+  }
+  return -1;
+}
+
 videoPlayer.addEventListener('timeupdate', () => {
-  const currentTime = videoPlayer.currentTime;
-  const duration = videoPlayer.duration || 1;
-  
-  // 1. Update playhead position on visual timeline
-  const playhead = document.getElementById('timeline-playhead');
-  if (playhead) {
-    playhead.style.left = `${(currentTime / duration) * 100}%`;
-  }
-  
-  // 2. Update time display text
-  timeDisplay.textContent = `${currentTime.toFixed(2)}s / ${videoPlayer.duration ? videoPlayer.duration.toFixed(2) : '0.00'}s`;
-  
-  // 3. Find and display active subtitle overlay
-  const activeSub = subtitles.find(s => currentTime >= s.start && currentTime <= s.end);
-  const subtitleOverlay = document.getElementById('video-subtitle-overlay');
-  if (subtitleOverlay) {
-    if (activeSub) {
-      subtitleOverlay.textContent = activeSub.text;
-      subtitleOverlay.style.display = 'block';
-      
-      // 4. Highlight active subtitle in list and scroll to it
-      const activeIdx = subtitles.indexOf(activeSub);
-      highlightSub(activeIdx);
-      scrollToActiveSub(activeIdx);
-    } else {
-      subtitleOverlay.textContent = '';
-      subtitleOverlay.style.display = 'none';
+  if (timeupdateRAF) return;
+  timeupdateRAF = requestAnimationFrame(() => {
+    timeupdateRAF = null;
+    const currentTime = videoPlayer.currentTime;
+    const duration = videoPlayer.duration || 1;
+    
+    // 1. Update playhead position on visual timeline
+    if (timelinePlayhead) {
+      timelinePlayhead.style.left = `${(currentTime / duration) * 100}%`;
     }
-  }
+    
+    // 2. Update time display text
+    timeDisplay.textContent = `${currentTime.toFixed(2)}s / ${videoPlayer.duration ? videoPlayer.duration.toFixed(2) : '0.00'}s`;
+    
+    // 3. Find and display active subtitle overlay (binary search)
+    const activeIdx = findActiveSub(currentTime);
+    const activeSub = activeIdx >= 0 ? subtitles[activeIdx] : null;
+
+    if (videoSubtitleOverlay) {
+      if (activeSub) {
+        if (videoSubtitleOverlay.textContent !== activeSub.text) {
+          videoSubtitleOverlay.textContent = activeSub.text;
+          videoSubtitleOverlay.style.display = 'block';
+        }
+      } else {
+        if (videoSubtitleOverlay.style.display !== 'none') {
+          videoSubtitleOverlay.textContent = '';
+          videoSubtitleOverlay.style.display = 'none';
+        }
+      }
+    }
+
+    // 4. Highlight active subtitle in list and scroll to it (only if changed)
+    if (activeIdx !== lastActiveIdx) {
+      highlightSub(activeIdx);
+      if (activeIdx !== -1) {
+        scrollToActiveSub(activeIdx);
+      }
+      lastActiveIdx = activeIdx;
+    }
+  });
 });
 
 videoPlayer.addEventListener('loadedmetadata', () => {
@@ -347,10 +381,18 @@ function getActiveIndex() {
   return subtitles.length > 0 ? 0 : -1;
 }
 
+let lastHighlightedEl = null;
 function highlightSub(idx) {
-  document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('active-sub'));
+  if (lastHighlightedEl) {
+    lastHighlightedEl.classList.remove('active-sub');
+    lastHighlightedEl = null;
+  }
+  if (idx < 0) return;
   const el = document.querySelector(`.sub-item[data-index="${idx}"]`);
-  if (el) el.classList.add('active-sub');
+  if (el) {
+    el.classList.add('active-sub');
+    lastHighlightedEl = el;
+  }
 }
 
 // --- Subtitles ---
@@ -480,32 +522,42 @@ function loadSubtitles() {
         <textarea rows="1" data-idx="${idx}" data-field="text">${escHtml(sub.text)}</textarea>
       </div>
       <div class="sub-actions">
-        <button onclick="jumpToSub(${idx})" title="Nhảy tới">⏩</button>
-        <button id="btn-tts-${idx}" onclick="synthesizeSubAudio(${idx})" title="Chuyển giọng nói" class="btn-tts">🔊</button>
-        <button id="btn-play-${idx}" onclick="playSubAudio(${idx})" title="Nghe thử giọng" class="btn-play ${sub.audio_path ? 'has-audio' : ''}" ${sub.audio_path ? '' : 'disabled'}>▶️</button>
-        <button onclick="translateSub(${idx})" title="Dịch phụ đề">🌐</button>
-        <button onclick="deleteSub(${idx})" title="Xóa">🗑</button>
+        <button class="sub-btn-jump" data-idx="${idx}" title="Nhảy tới">⏩</button>
+        <button class="sub-btn-tts btn-tts" data-idx="${idx}" title="Chuyển giọng nói">🔊</button>
+        <button class="sub-btn-play btn-play ${sub.audio_path ? 'has-audio' : ''}" data-idx="${idx}" title="Nghe thử giọng" ${sub.audio_path ? '' : 'disabled'}>▶️</button>
+        <button class="sub-btn-translate" data-idx="${idx}" title="Dịch phụ đề">🌐</button>
+        <button class="sub-btn-delete" data-idx="${idx}" title="Xóa">🗑</button>
       </div>
     </div>
   `).join('');
-
-  document.querySelectorAll('.sub-item input, .sub-item textarea').forEach(el => {
-    el.addEventListener('change', (e) => updateSubField(e, true)); // Save to backend on focus leave / enter
-    el.addEventListener('input', (e) => updateSubField(e, false));  // Update timeline locally on input
-  });
-
-  document.querySelectorAll('.sub-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
-        const idx = parseInt(el.dataset.index);
-        highlightSub(idx);
-        if (videoPlayer) videoPlayer.currentTime = subtitles[idx].start;
-      }
-    });
-  });
-
   updateTimelineBlocks();
 }
+
+// Event delegation for subtitle list
+subtitleList.addEventListener('change', (e) => {
+  if (e.target.matches('input, textarea')) updateSubField(e, true);
+});
+subtitleList.addEventListener('input', (e) => {
+  if (e.target.matches('input, textarea')) updateSubField(e, false);
+});
+subtitleList.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-idx]');
+  if (btn) {
+    const idx = parseInt(btn.dataset.idx);
+    if (btn.classList.contains('sub-btn-jump')) jumpToSub(idx);
+    else if (btn.classList.contains('sub-btn-tts')) synthesizeSubAudio(idx);
+    else if (btn.classList.contains('sub-btn-play')) playSubAudio(idx);
+    else if (btn.classList.contains('sub-btn-translate')) translateSub(idx);
+    else if (btn.classList.contains('sub-btn-delete')) deleteSub(idx);
+    return;
+  }
+  const item = e.target.closest('.sub-item');
+  if (item && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+    const idx = parseInt(item.dataset.index);
+    highlightSub(idx);
+    if (videoPlayer) videoPlayer.currentTime = subtitles[idx].start;
+  }
+});
 
 function updateSubField(e, isFinal) {
   const idx = parseInt(e.target.dataset.idx);
@@ -528,7 +580,28 @@ function updateSubField(e, isFinal) {
       }
     }
     
-    updateTimelineBlocks();
+    // Targeted update to avoid rebuilding the entire timeline on every keystroke
+    const duration = videoPlayer && videoPlayer.duration ? videoPlayer.duration : 1;
+    const block = document.querySelector(`.timeline-sub-block[data-sub-index="${idx}"]`);
+    if (block) {
+      const sub = subtitles[idx];
+      const left = (sub.start / duration) * 100;
+      const width = ((sub.end - sub.start) / duration) * 100;
+      const words = sub.text ? sub.text.split(/\s+/).filter(w => w.length > 0).length : 0;
+      const estAudioDur = Math.max(1.5, words * 0.4);
+      const audioPercentage = sub.end > sub.start ? (estAudioDur / (sub.end - sub.start)) * 100 : 0;
+      
+      block.style.left = `${left}%`;
+      block.style.width = `${width}%`;
+      block.title = `${sub.text} (Âm thanh thực tế: ~${estAudioDur.toFixed(1)}s)`;
+      const span = block.querySelector('span');
+      if (span) span.textContent = sub.text;
+      const indicator = block.querySelector('.timeline-audio-indicator');
+      if (indicator) indicator.style.width = `${audioPercentage}%`;
+    } else {
+      updateTimelineBlocks();
+    }
+
     if (isFinal) {
       saveSubtitlesToBackend();
     }
@@ -608,6 +681,83 @@ btnExportSrt.addEventListener('click', () => {
   a.download = 'subtitles.srt';
   a.click();
   URL.revokeObjectURL(a.href);
+});
+
+btnStt.addEventListener('click', async () => {
+  if (!currentVideoId) { alert('Chưa có video nào. Vui lòng tải video trước.'); return; }
+  if (subtitles.length > 0) {
+    if (!confirm('Thao tác này sẽ thay thế tất cả phụ đề hiện tại. Tiếp tục?')) return;
+  }
+
+  btnStt.disabled = true;
+  sttProgress.style.display = 'block';
+  sttText.textContent = 'Đang tạo phụ đề tự động...';
+  sttFill.style.width = '0%';
+
+  try {
+    const res = await fetch(`${API}/api/video/${currentVideoId}/transcribe`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const { task_id } = await res.json();
+
+    let pollAttempts = 0;
+    const MAX_POLL_ATTEMPTS = 600;
+    const pollInterval = setInterval(async () => {
+      pollAttempts++;
+      try {
+        if (pollAttempts > MAX_POLL_ATTEMPTS) {
+          clearInterval(pollInterval);
+          sttText.textContent = 'Lỗi: Quá thời gian chờ';
+          btnStt.disabled = false;
+          setTimeout(() => { sttProgress.style.display = 'none'; }, 3000);
+          return;
+        }
+
+        const statusRes = await fetch(`${API}/api/video/${currentVideoId}/transcribe-status?task_id=${task_id}`);
+        if (!statusRes.ok) {
+          clearInterval(pollInterval);
+          throw new Error(`HTTP ${statusRes.status}`);
+        }
+        const data = await statusRes.json();
+
+        const progressVal = data.progress != null ? data.progress : 0;
+        sttFill.style.width = `${progressVal}%`;
+        sttText.textContent = data.message || `Đang xử lý... ${progressVal}%`;
+
+        if (data.status === 'completed') {
+          clearInterval(pollInterval);
+          sttFill.style.width = '100%';
+          sttText.textContent = 'Hoàn tất!';
+          btnStt.disabled = false;
+
+          if (data.subtitles && data.subtitles.length > 0) {
+            subtitles = data.subtitles;
+            subCounter = subtitles.length;
+            loadSubtitles();
+            saveSubtitlesToBackend();
+          }
+          setTimeout(() => { sttProgress.style.display = 'none'; }, 2000);
+
+        } else if (data.status === 'failed') {
+          clearInterval(pollInterval);
+          sttText.textContent = 'Lỗi: ' + (data.error || 'Lỗi không xác định');
+          btnStt.disabled = false;
+          setTimeout(() => { sttProgress.style.display = 'none'; }, 4000);
+        }
+      } catch (err) {
+        clearInterval(pollInterval);
+        sttText.textContent = 'Lỗi kết nối: ' + err.message;
+        btnStt.disabled = false;
+        setTimeout(() => { sttProgress.style.display = 'none'; }, 4000);
+      }
+    }, 1000);
+  } catch (err) {
+    sttText.textContent = 'Lỗi: ' + err.message;
+    btnStt.disabled = false;
+    setTimeout(() => { sttProgress.style.display = 'none'; }, 4000);
+  }
 });
 
 function srtTime(sec) {
@@ -863,7 +1013,7 @@ function scrollToActiveSub(idx) {
   lastScrolledIdx = idx;
   const activeItem = document.querySelector(`.sub-item[data-index="${idx}"]`);
   if (activeItem) {
-    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    activeItem.scrollIntoView({ block: 'nearest' });
   }
 }
 
@@ -2896,4 +3046,45 @@ renderWaveStyles = function() {
       });
     });
   }, 100);
+}
+
+// --- Main Video Play/Pause Logic ---
+const btnPlayPause = document.getElementById('btn-play-pause');
+const iconPlay = document.getElementById('icon-play');
+const iconPause = document.getElementById('icon-pause');
+const textPlayPause = document.getElementById('text-play-pause');
+
+function togglePlayPause() {
+  if (!videoPlayer || !videoPlayer.src) return;
+  if (videoPlayer.paused || videoPlayer.ended) {
+    videoPlayer.play().catch(e => console.warn('Could not play video:', e));
+  } else {
+    videoPlayer.pause();
+  }
+}
+
+if (btnPlayPause) {
+  btnPlayPause.addEventListener('click', togglePlayPause);
+}
+
+// Allow clicking on the video wrapper/video to toggle play/pause
+if (videoPlayer) {
+  videoPlayer.addEventListener('click', togglePlayPause);
+  // Also add to subtitle overlay so clicking subtitles also pauses/plays
+  const subtitleOverlay = document.getElementById('video-subtitle-overlay');
+  if (subtitleOverlay) {
+    subtitleOverlay.addEventListener('click', togglePlayPause);
+  }
+  
+  videoPlayer.addEventListener('play', () => {
+    if (iconPlay) iconPlay.style.display = 'none';
+    if (iconPause) iconPause.style.display = 'block';
+    if (textPlayPause) textPlayPause.textContent = 'Dừng';
+  });
+  
+  videoPlayer.addEventListener('pause', () => {
+    if (iconPlay) iconPlay.style.display = 'block';
+    if (iconPause) iconPause.style.display = 'none';
+    if (textPlayPause) textPlayPause.textContent = 'Phát';
+  });
 }

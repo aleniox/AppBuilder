@@ -41,7 +41,6 @@ def transcribe_video_background(
             device=device,
             compute_type=compute_type,
             language=language,
-            batch_size=batch_size,
         )
 
         _update_task(task_id, progress=20, message="Loading audio...")
