@@ -286,30 +286,32 @@
                 </svg>
                 Xuất SRT
               </button>
-              <button id="btn-stt" class="btn-toolbar">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 10v2a7 7 0 01-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" stroke-width="2" />
-                  <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" stroke-width="2" />
-                </svg>
-                Speech to Text
-              </button>
-              <select id="stt-lang" class="toolbar-select" style="margin-left:auto;font-size:12px;padding:2px 6px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;">
-                <option value="en">English</option>
-                <option value="vi">Tiếng Việt</option>
-                <option value="ja">日本語</option>
-                <option value="ko">한국어</option>
-                <option value="zh">中文</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="es">Español</option>
-                <option value="pt">Português</option>
-                <option value="ru">Русский</option>
-                <option value="ar">العربية</option>
-                <option value="hi">हिन्दी</option>
-                <option value="th">ไทย</option>
-              </select>
+              <div class="stt-action-wrap" style="display:flex;gap:6px;grid-column:1 / -1;">
+                <button id="btn-stt" class="btn-toolbar" style="flex:1;">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="btn-icon-svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 10v2a7 7 0 01-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" stroke-width="2" />
+                    <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                  Tạo phụ đề tự động (STT)
+                </button>
+                <select id="stt-lang" class="toolbar-select" style="font-size:12px;padding:4px 8px;background:#111118;color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;outline:none;min-width:110px;">
+                  <option value="en">English</option>
+                  <option value="vi">Tiếng Việt</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                  <option value="zh">中文</option>
+                  <option value="fr">Français</option>
+                  <option value="de">Deutsch</option>
+                  <option value="es">Español</option>
+                  <option value="pt">Português</option>
+                  <option value="ru">Русский</option>
+                  <option value="ar">العربية</option>
+                  <option value="hi">हिन्दी</option>
+                  <option value="th">ไทย</option>
+                </select>
+              </div>
             </div>
 
             <div id="stt-progress" class="progress-container-wrapper" style="display:none">
@@ -510,6 +512,13 @@
           <div class="tts-setting-group">
             <label for="tts-max-tokens">Max tokens</label>
             <input type="number" id="tts-max-tokens" class="styled-number-input" value="3000" min="100" max="10000" step="100">
+          </div>
+          <div class="tts-setting-group">
+            <label for="tts-output-mode">Chế độ xuất file</label>
+            <select id="tts-output-mode" class="styled-number-input">
+              <option value="single">Một file duy nhất</option>
+              <option value="folder">Nhiều file (cắt đoạn)</option>
+            </select>
           </div>
         </div>
         <button id="btn-tts-generate" class="btn-action-primary" style="margin-top: 16px; width: 100%;">

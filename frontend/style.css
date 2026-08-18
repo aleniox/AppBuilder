@@ -41,10 +41,10 @@ body {
 
 /* Header styling */
 .app-header {
-  background: rgba(10, 10, 16, 0.8);
+  background: rgba(10, 10, 16, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
-  padding: 20px 40px;
+  padding: 14px 40px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -53,6 +53,10 @@ body {
 .header-container {
   max-width: 1560px;
   margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .logo-area {
@@ -579,7 +583,7 @@ select option {
 
 #subtitle-toolbar {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -967,6 +971,7 @@ select option {
   overflow-y: auto;
   display: grid;
   grid-template-columns: 1fr;
+  align-content: start;
   gap: 16px;
   padding-right: 8px;
 }
@@ -1238,6 +1243,21 @@ select option {
   }
 }
 
+@media (max-width: 900px) {
+  .app-header {
+    padding: 12px 20px;
+  }
+  .header-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .nav-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
 /* ==========================================================================
    MODAL OVERLAY STYLING
    ========================================================================== */
@@ -1415,13 +1435,13 @@ select option {
    TTS TAB - NAVIGATION TABS
    ========================================================================== */
 .nav-tabs {
-  display: flex;
+  display: inline-flex;
   gap: 4px;
-  margin-left: 32px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 3px;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px;
+  border-radius: 12px;
   border: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .nav-tab {

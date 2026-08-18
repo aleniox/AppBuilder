@@ -306,8 +306,9 @@ class SparkTTSEngine:
         top_k: int = 50,
         top_p: float = 1.0,
         max_tokens: int = 3000,
+        max_chunk_chars: int = 200,
     ):
-        wav = self.synthesize(text, ref_audio, temperature, top_k, top_p, max_tokens)
+        wav = self.synthesize(text, ref_audio, temperature, top_k, top_p, max_tokens, max_chunk_chars)
         if wav.size > 0:
             sr = self.audio_tokenizer.config.get("sample_rate", 16000)
             sf.write(output_path, wav, sr)
@@ -394,7 +395,7 @@ def get_engine(
             )
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        _engine_instance = SparkTTSEngine(base_model, lora_path, device, r"F:\WebEdit\video-editor\audio_speaker.mp3")
+        _engine_instance = SparkTTSEngine(base_model, lora_path, device, ref_audio)
     return _engine_instance
 
 

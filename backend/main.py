@@ -121,6 +121,7 @@ class TTSSynthesizePayload(BaseModel):
     top_k: int = 50
     top_p: float = 1.0
     max_tokens: int = 3000
+    output_mode: str = "single"
 
 
 @app.get("/api/status")
@@ -597,16 +598,24 @@ def _background_tts_task(task_id: str, payload: TTSSynthesizePayload):
             base_dir=str(OUTPUT_DIR),
             progress_callback=progress_callback,
         )
-        full_wav = os.path.join(out_dir, "full.wav")
-        if not os.path.isfile(full_wav):
-            raise Exception("TTS returned empty audio")
-        audio_filename = f"tts_{uuid.uuid4().hex[:8]}.wav"
-        shutil.copy2(full_wav, str(OUTPUT_DIR / audio_filename))
+        
+        if payload.output_mode == "folder":
+            zip_filename = f"tts_{uuid.uuid4().hex[:8]}"
+            zip_path = str(OUTPUT_DIR / zip_filename)
+            shutil.make_archive(zip_path, 'zip', out_dir)
+            final_filename = f"{zip_filename}.zip"
+        else:
+            full_wav = os.path.join(out_dir, "full.wav")
+            if not os.path.isfile(full_wav):
+                raise Exception("TTS returned empty audio")
+            final_filename = f"tts_{uuid.uuid4().hex[:8]}.wav"
+            shutil.copy2(full_wav, str(OUTPUT_DIR / final_filename))
+
         with tts_tasks_lock:
             if task_id in tts_tasks:
                 tts_tasks[task_id]["status"] = "completed"
                 tts_tasks[task_id]["progress"] = 100
-                tts_tasks[task_id]["audio_url"] = f"/api/download/{audio_filename}"
+                tts_tasks[task_id]["audio_url"] = f"/api/download/{final_filename}"
     except Exception as e:
         print(f"Background TTS error for {task_id}: {e}")
         with tts_tasks_lock:

@@ -12,8 +12,17 @@ const playerArea = document.getElementById('player-area');
 const renderArea = document.getElementById('render-area');
 
 // Screen switching DOM refs
+const navVideoEditor = document.getElementById('nav-video-editor');
+const navYoutube = document.getElementById('nav-youtube');
+const navTts = document.getElementById('nav-tts');
+const navMusic = document.getElementById('nav-music');
+
 const startScreen = document.getElementById('start-screen');
 const workspaceScreen = document.getElementById('workspace-screen');
+const youtubeScreen = document.getElementById('youtube-screen');
+const ttsScreen = document.getElementById('tts-screen');
+const musicScreen = document.getElementById('music-screen');
+
 const btnOpenProject = document.getElementById('btn-open-project');
 const btnBackToStart = document.getElementById('btn-back-to-start');
 const activeVideoName = document.getElementById('active-video-name');
@@ -45,6 +54,101 @@ const uploadProgressContainer = document.getElementById('upload-progress-contain
 const uploadStatusText = document.getElementById('upload-status-text');
 const uploadPercentage = document.getElementById('upload-percentage');
 const uploadProgressFill = document.getElementById('upload-progress-fill');
+
+// --- Helper to pause all audio/video when switching screens ---
+function stopAllMedia() {
+  try {
+    if (videoPlayer && !videoPlayer.paused) videoPlayer.pause();
+  } catch (e) {}
+  try {
+    const yp = document.getElementById('youtube-preview');
+    if (yp && !yp.paused) yp.pause();
+  } catch (e) {}
+  try {
+    const ta = document.getElementById('tts-audio-player');
+    if (ta && !ta.paused) ta.pause();
+  } catch (e) {}
+  try {
+    const ma = document.getElementById('music-audio-player');
+    if (ma && !ma.paused) {
+      ma.pause();
+      if (typeof stopMusicPlayback === 'function') stopMusicPlayback();
+    }
+  } catch (e) {}
+}
+
+function showVideoEditorScreen() {
+  stopAllMedia();
+  if (navVideoEditor) navVideoEditor.classList.add('active');
+  if (navTts) navTts.classList.remove('active');
+  if (navYoutube) navYoutube.classList.remove('active');
+  if (navMusic) navMusic.classList.remove('active');
+  if (ttsScreen) ttsScreen.style.display = 'none';
+  if (musicScreen) musicScreen.style.display = 'none';
+  if (youtubeScreen) youtubeScreen.style.display = 'none';
+  if (currentVideoId) {
+    if (workspaceScreen) workspaceScreen.style.display = 'block';
+    if (startScreen) startScreen.style.display = 'none';
+  } else {
+    if (startScreen) startScreen.style.display = '';
+    if (workspaceScreen) workspaceScreen.style.display = 'none';
+  }
+}
+
+function showYouTubeScreen() {
+  stopAllMedia();
+  if (navYoutube) navYoutube.classList.add('active');
+  if (navVideoEditor) navVideoEditor.classList.remove('active');
+  if (navTts) navTts.classList.remove('active');
+  if (navMusic) navMusic.classList.remove('active');
+  if (startScreen) startScreen.style.display = 'none';
+  if (workspaceScreen) workspaceScreen.style.display = 'none';
+  if (ttsScreen) ttsScreen.style.display = 'none';
+  if (musicScreen) musicScreen.style.display = 'none';
+  if (youtubeScreen) youtubeScreen.style.display = '';
+}
+
+function showTTSScreen() {
+  stopAllMedia();
+  if (navTts) navTts.classList.add('active');
+  if (navVideoEditor) navVideoEditor.classList.remove('active');
+  if (navYoutube) navYoutube.classList.remove('active');
+  if (navMusic) navMusic.classList.remove('active');
+  if (startScreen) startScreen.style.display = 'none';
+  if (workspaceScreen) workspaceScreen.style.display = 'none';
+  if (musicScreen) musicScreen.style.display = 'none';
+  if (youtubeScreen) youtubeScreen.style.display = 'none';
+  if (ttsScreen) ttsScreen.style.display = '';
+}
+
+function showMusicScreen() {
+  stopAllMedia();
+  if (navMusic) navMusic.classList.add('active');
+  if (navVideoEditor) navVideoEditor.classList.remove('active');
+  if (navTts) navTts.classList.remove('active');
+  if (navYoutube) navYoutube.classList.remove('active');
+  if (startScreen) startScreen.style.display = 'none';
+  if (workspaceScreen) workspaceScreen.style.display = 'none';
+  if (ttsScreen) ttsScreen.style.display = 'none';
+  if (youtubeScreen) youtubeScreen.style.display = 'none';
+  if (musicScreen) musicScreen.style.display = '';
+  if (typeof resizeMusicCanvas === 'function') {
+    if (typeof musicState !== 'undefined' && !musicState.canvasReady) {
+      resizeMusicCanvas();
+      musicState.canvasReady = true;
+    }
+    if (typeof renderWaveStyles === 'function') renderWaveStyles();
+    if (typeof renderMusicThumbnails === 'function') renderMusicThumbnails();
+    if (typeof musicState !== 'undefined' && !musicState.isPlaying && typeof renderMusicStaticFrame === 'function') {
+      renderMusicStaticFrame();
+    }
+  }
+}
+
+if (navVideoEditor) navVideoEditor.addEventListener('click', showVideoEditorScreen);
+if (navYoutube) navYoutube.addEventListener('click', showYouTubeScreen);
+if (navTts) navTts.addEventListener('click', showTTSScreen);
+if (navMusic) navMusic.addEventListener('click', showMusicScreen);
 
 // --- Upload ---
 dropZone.addEventListener('click', () => fileInput.click());
@@ -477,9 +581,10 @@ async function synthesizeSubAudio(idx) {
   const sub = subtitles[idx];
   if (!sub || !sub.text.trim()) return alert('Phụ đề trống, không thể chuyển giọng.');
   const btn = document.getElementById(`btn-tts-${idx}`);
-  if (!btn) return;
-  btn.disabled = true;
-  btn.textContent = '⏳';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳';
+  }
   try {
     const res = await fetch(`${API}/api/video/${currentVideoId}/subtitle/${idx}/synthesize`, { method: 'POST' });
     if (!res.ok) {
@@ -488,7 +593,7 @@ async function synthesizeSubAudio(idx) {
     }
     const data = await res.json();
     sub.audio_path = data.audio_path;
-    btn.textContent = '🔊';
+    if (btn) btn.textContent = '🔊';
     const playBtn = document.getElementById(`btn-play-${idx}`);
     if (playBtn) {
       playBtn.disabled = false;
@@ -497,8 +602,9 @@ async function synthesizeSubAudio(idx) {
   } catch (err) {
     console.error('Lỗi TTS:', err);
     alert('Chuyển giọng thất bại: ' + err.message);
+    if (btn) btn.textContent = '🔊';
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -524,8 +630,8 @@ function loadSubtitles() {
       </div>
       <div class="sub-actions">
         <button class="sub-btn-jump" data-idx="${idx}" title="Nhảy tới">⏩</button>
-        <button class="sub-btn-tts btn-tts" data-idx="${idx}" title="Chuyển giọng nói">🔊</button>
-        <button class="sub-btn-play btn-play ${sub.audio_path ? 'has-audio' : ''}" data-idx="${idx}" title="Nghe thử giọng" ${sub.audio_path ? '' : 'disabled'}>▶️</button>
+        <button class="sub-btn-tts btn-tts" id="btn-tts-${idx}" data-idx="${idx}" title="Chuyển giọng nói">🔊</button>
+        <button class="sub-btn-play btn-play ${sub.audio_path ? 'has-audio' : ''}" id="btn-play-${idx}" data-idx="${idx}" title="Nghe thử giọng" ${sub.audio_path ? '' : 'disabled'}>▶️</button>
         <button class="sub-btn-translate" data-idx="${idx}" title="Dịch phụ đề">🌐</button>
         <button class="sub-btn-delete" data-idx="${idx}" title="Xóa">🗑</button>
       </div>
@@ -996,9 +1102,21 @@ async function loadRefAudioStatus() {
 // --- Keyboard shortcuts ---
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'i' || e.key === 'I') { btnSetStart.click(); e.preventDefault(); }
-  if (e.key === 'o' || e.key === 'O') { btnSetEnd.click(); e.preventDefault(); }
-  if (e.key === 'Enter' && !e.shiftKey) { addSubtitle(); e.preventDefault(); }
+  // If settings modal is open or workspace is hidden, do not trigger video shortcuts
+  const modal = document.getElementById('settings-modal');
+  if (modal && modal.style.display !== 'none') return;
+  if (!workspaceScreen || workspaceScreen.style.display === 'none') return;
+
+  if (e.key === 'i' || e.key === 'I') {
+    if (btnSetStart) { btnSetStart.click(); e.preventDefault(); }
+  }
+  if (e.key === 'o' || e.key === 'O') {
+    if (btnSetEnd) { btnSetEnd.click(); e.preventDefault(); }
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    addSubtitle();
+    e.preventDefault();
+  }
 });
 
 function fmtDuration(sec) {
@@ -1255,6 +1373,20 @@ if (btnSaveSettings) {
   });
 }
 
+if (settingsModal) {
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && settingsModal && settingsModal.style.display !== 'none') {
+    settingsModal.style.display = 'none';
+  }
+});
+
 if (btnTestLlm) {
   btnTestLlm.addEventListener('click', async () => {
     const url = settingsApiUrl ? settingsApiUrl.value : 'http://localhost:8080';
@@ -1368,8 +1500,6 @@ window.translateSub = async function(idx) {
 // ==========================================================================
 // YOUTUBE TAB
 // ==========================================================================
-const navYoutube = document.getElementById('nav-youtube');
-const youtubeScreen = document.getElementById('youtube-screen');
 const youtubeUrl = document.getElementById('youtube-url');
 const btnYoutubeDownload = document.getElementById('btn-youtube-download');
 const youtubeProgress = document.getElementById('youtube-progress');
@@ -1393,20 +1523,6 @@ const youtubeSubCount = document.getElementById('youtube-sub-count');
 
 let youtubeVideoId = null;
 let youtubeTranscribeTaskId = null;
-
-function showYouTubeScreen() {
-  navYoutube.classList.add('active');
-  navVideoEditor.classList.remove('active');
-  navTts.classList.remove('active');
-  navMusic.classList.remove('active');
-  startScreen.style.display = 'none';
-  workspaceScreen.style.display = 'none';
-  ttsScreen.style.display = 'none';
-  musicScreen.style.display = 'none';
-  youtubeScreen.style.display = '';
-}
-
-navYoutube.addEventListener('click', showYouTubeScreen);
 
 // YouTube download
 btnYoutubeDownload.addEventListener('click', async () => {
@@ -1594,9 +1710,6 @@ btnYoutubeEditor.addEventListener('click', () => {
 // ==========================================================================
 // TTS TAB
 // ==========================================================================
-const navVideoEditor = document.getElementById('nav-video-editor');
-const navTts = document.getElementById('nav-tts');
-const ttsScreen = document.getElementById('tts-screen');
 const ttsTextInput = document.getElementById('tts-text-input');
 const btnTtsLoadTxt = document.getElementById('btn-tts-load-txt');
 const ttsTxtInput = document.getElementById('tts-txt-input');
@@ -1615,33 +1728,6 @@ const ttsProgressFill = document.getElementById('tts-progress-fill');
 const ttsResult = document.getElementById('tts-result');
 const ttsAudioPlayer = document.getElementById('tts-audio-player');
 const ttsDownloadLink = document.getElementById('tts-download-link');
-
-function showVideoEditorScreen() {
-  navVideoEditor.classList.add('active');
-  navTts.classList.remove('active');
-  navYoutube.classList.remove('active');
-  navMusic.classList.remove('active');
-  ttsScreen.style.display = 'none';
-  musicScreen.style.display = 'none';
-  youtubeScreen.style.display = 'none';
-  startScreen.style.display = '';
-  workspaceScreen.style.display = 'none';
-}
-
-function showTTSScreen() {
-  navTts.classList.add('active');
-  navVideoEditor.classList.remove('active');
-  navYoutube.classList.remove('active');
-  navMusic.classList.remove('active');
-  startScreen.style.display = 'none';
-  workspaceScreen.style.display = 'none';
-  musicScreen.style.display = 'none';
-  youtubeScreen.style.display = 'none';
-  ttsScreen.style.display = '';
-}
-
-navVideoEditor.addEventListener('click', showVideoEditorScreen);
-navTts.addEventListener('click', showTTSScreen);
 
 // Load .txt file into textarea
 btnTtsLoadTxt.addEventListener('click', () => ttsTxtInput.click());
@@ -1722,6 +1808,7 @@ btnTtsGenerate.addEventListener('click', async () => {
   ttsProgressText.className = '';
   btnTtsGenerate.disabled = true;
   try {
+    const outputMode = document.getElementById('tts-output-mode') ? document.getElementById('tts-output-mode').value : 'single';
     const res = await fetch(`${API}/api/tts/synthesize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1731,6 +1818,7 @@ btnTtsGenerate.addEventListener('click', async () => {
         top_k: parseInt(ttsTopK.value) || 50,
         top_p: 1.0,
         max_tokens: parseInt(ttsMaxTokens.value) || 3000,
+        output_mode: outputMode
       }),
     });
     if (!res.ok) {
@@ -1771,8 +1859,19 @@ btnTtsGenerate.addEventListener('click', async () => {
           ttsProgressFill.style.width = '100%';
           ttsProgressText.textContent = 'Đang tạo giọng nói... 100%';
           const audioUrl = `${API}${data.audio_url}`;
-          ttsAudioPlayer.src = audioUrl;
-          ttsAudioPlayer.load();
+          
+          if (audioUrl.endsWith('.zip')) {
+            hideEl(ttsAudioPlayer);
+            ttsDownloadLink.download = "tts_output.zip";
+            ttsDownloadLink.textContent = "Tải về thư mục (ZIP)";
+          } else {
+            showEl(ttsAudioPlayer);
+            ttsAudioPlayer.src = audioUrl;
+            ttsAudioPlayer.load();
+            ttsDownloadLink.download = "tts_output.wav";
+            ttsDownloadLink.textContent = "Tải File Audio";
+          }
+          
           ttsDownloadLink.href = audioUrl;
           showEl(ttsResult);
           hideEl(ttsProgress);
@@ -1805,9 +1904,6 @@ btnTtsGenerate.addEventListener('click', async () => {
 // ==========================================================================
 // MUSIC VIDEO TAB
 // ==========================================================================
-const navMusic = document.getElementById('nav-music');
-const musicScreen = document.getElementById('music-screen');
-
 const musicImageZone = document.getElementById('music-image-zone');
 const musicImageInput = document.getElementById('music-image-input');
 const musicThumbnails = document.getElementById('music-thumbnails');
@@ -1878,54 +1974,6 @@ const WAVE_STYLES = [
   { id: 10, name: 'Cyber Polygon', icon: 'polygon' },
   { id: 11, name: '3D Blocks', icon: 'block3d' },
 ];
-
-// --- Tab switching ---
-function showMusicScreen() {
-  navMusic.classList.add('active');
-  navVideoEditor.classList.remove('active');
-  navTts.classList.remove('active');
-  navYoutube.classList.remove('active');
-  startScreen.style.display = 'none';
-  workspaceScreen.style.display = 'none';
-  ttsScreen.style.display = 'none';
-  youtubeScreen.style.display = 'none';
-  musicScreen.style.display = '';
-  if (!musicState.canvasReady) {
-    resizeMusicCanvas();
-    musicState.canvasReady = true;
-  }
-  renderWaveStyles();
-  renderMusicThumbnails();
-}
-
-// Update existing show functions to hide music and youtube screens
-const origShowVideoEditor = showVideoEditorScreen;
-showVideoEditorScreen = function() {
-  navVideoEditor.classList.add('active');
-  navTts.classList.remove('active');
-  navYoutube.classList.remove('active');
-  navMusic.classList.remove('active');
-  ttsScreen.style.display = 'none';
-  musicScreen.style.display = 'none';
-  youtubeScreen.style.display = 'none';
-  startScreen.style.display = '';
-  workspaceScreen.style.display = 'none';
-};
-
-const origShowTTS = showTTSScreen;
-showTTSScreen = function() {
-  navTts.classList.add('active');
-  navVideoEditor.classList.remove('active');
-  navYoutube.classList.remove('active');
-  navMusic.classList.remove('active');
-  startScreen.style.display = 'none';
-  workspaceScreen.style.display = 'none';
-  musicScreen.style.display = 'none';
-  youtubeScreen.style.display = 'none';
-  ttsScreen.style.display = '';
-};
-
-navMusic.addEventListener('click', showMusicScreen);
 
 function resizeMusicCanvas() {
   const rect = musicCanvas.parentElement.getBoundingClientRect();
@@ -2135,17 +2183,26 @@ function loadMusicAudio(file) {
 
 let _webAudioInited = false;
 function initWebAudio() {
-  if (_webAudioInited) return;
+  if (_webAudioInited) {
+    if (musicState.audioCtx && musicState.audioCtx.state === 'suspended') {
+      musicState.audioCtx.resume().catch(() => {});
+    }
+    return;
+  }
   _webAudioInited = true;
   musicState.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   musicState.analyser = musicState.audioCtx.createAnalyser();
   musicState.analyser.fftSize = 256;
   musicState.gainNode = musicState.audioCtx.createGain();
   musicState.gainNode.gain.value = 1.0;
-  musicState.source = musicState.audioCtx.createMediaElementSource(musicAudioPlayer);
-  musicState.source.connect(musicState.analyser);
-  musicState.analyser.connect(musicState.gainNode);
-  musicState.gainNode.connect(musicState.audioCtx.destination);
+  try {
+    musicState.source = musicState.audioCtx.createMediaElementSource(musicAudioPlayer);
+    musicState.source.connect(musicState.analyser);
+    musicState.analyser.connect(musicState.gainNode);
+    musicState.gainNode.connect(musicState.audioCtx.destination);
+  } catch (err) {
+    console.warn("MediaElementSource connection warning:", err);
+  }
   musicState.freqArray = new Uint8Array(musicState.analyser.frequencyBinCount);
   musicState.timeArray = new Uint8Array(musicState.analyser.frequencyBinCount);
 }
@@ -2840,11 +2897,32 @@ btnMusicReset.addEventListener('click', () => {
     stopMusicPlayback();
   }
   if (musicState.isRecording) {
-    musicState.mediaRecorder.stop();
+    if (musicState.mediaRecorder && musicState.mediaRecorder.state !== 'inactive') {
+      musicState.mediaRecorder.stop();
+    }
     musicState.isRecording = false;
   }
   musicAudioPlayer.currentTime = 0;
   musicAudioPlayer.pause();
+
+  // Clean up object URLs
+  if (musicState.audioUrl) {
+    URL.revokeObjectURL(musicState.audioUrl);
+    musicState.audioUrl = null;
+    musicState.audioFile = null;
+  }
+  musicState.images.forEach(img => {
+    if (img.url) URL.revokeObjectURL(img.url);
+  });
+  musicState.images = [];
+  musicState.cachedImages = [];
+  renderMusicThumbnails();
+  updateMusicButtons();
+
+  if (musicAudioInfo) musicAudioInfo.style.display = 'none';
+  if (musicAudioInput) musicAudioInput.value = '';
+  if (musicImageInput) musicImageInput.value = '';
+
   musicHint.style.display = 'flex';
   const ctx = musicCanvas.getContext('2d');
   ctx.clearRect(0, 0, musicCanvas.width, musicCanvas.height);
@@ -2857,6 +2935,13 @@ function initMusicTab() {
   resizeMusicCanvas();
   renderWaveStyles();
 }
+
+window.addEventListener('resize', () => {
+  if (musicScreen && musicScreen.style.display !== 'none') {
+    resizeMusicCanvas();
+    if (!musicState.isPlaying) renderMusicStaticFrame();
+  }
+});
 
 // --- Init ---
 loadVideoList();
