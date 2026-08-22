@@ -47,22 +47,29 @@ def _verify_password(password: str, password_hash: str, salt: str) -> bool:
     key, _ = _hash_password(password, salt)
     return secrets.compare_digest(key, password_hash)
 
-def register_user(username: str, email: str, password: str) -> Dict[str, Any]:
-    username = username.strip()
+def register_user(username: Optional[str], email: str, password: str) -> Dict[str, Any]:
     email = email.strip().lower()
+    if not email or "@" not in email or "." not in email:
+        raise ValueError("Vui lòng nhập địa chỉ Email hợp lệ")
+
+    if not username:
+        username = email.split("@")[0]
+    else:
+        username = username.strip()
     
-    if len(username) < 3:
-        raise ValueError("Tên người dùng phải có ít nhất 3 ký tự")
     if len(password) < 6:
         raise ValueError("Mật khẩu phải có ít nhất 6 ký tự")
-    if "@" not in email or "." not in email:
-        raise ValueError("Email không hợp lệ")
 
     for user in _db["users"].values():
-        if user["username"].lower() == username.lower():
-            raise ValueError("Tên người dùng đã được sử dụng")
         if user["email"].lower() == email:
-            raise ValueError("Email đã được đăng ký")
+            raise ValueError("Email này đã được đăng ký tài khoản")
+
+    # Ensure unique username
+    base_username = username
+    counter = 1
+    while any(u.get("username", "").lower() == username.lower() for u in _db["users"].values()):
+        username = f"{base_username}_{counter}"
+        counter += 1
 
     user_id = "u_" + str(uuid.uuid4())[:12]
     pwd_hash, salt = _hash_password(password)
@@ -102,6 +109,11 @@ def authenticate_user(login_id: str, password: str) -> Dict[str, Any]:
 
     if not target_user:
         raise ValueError("Tên đăng nhập hoặc mật khẩu không chính xác")
+
+    if not target_user.get("password_hash") or not target_user.get("salt"):
+        if target_user.get("provider") == "google":
+            raise ValueError("Tài khoản này được tạo bằng Google. Vui lòng bấm 'Đăng nhập bằng Google' ở trên.")
+        raise ValueError("Tài khoản này chưa tạo mật khẩu. Vui lòng sử dụng Google để đăng nhập.")
 
     if not _verify_password(password, target_user["password_hash"], target_user["salt"]):
         raise ValueError("Tên đăng nhập hoặc mật khẩu không chính xác")

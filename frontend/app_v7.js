@@ -89,13 +89,15 @@ const formRegister = document.getElementById('form-register');
 const loginUsernameInput = document.getElementById('login-username');
 const loginPasswordInput = document.getElementById('login-password');
 const loginErrorBox = document.getElementById('login-error');
-const regUsernameInput = document.getElementById('reg-username');
 const regEmailInput = document.getElementById('reg-email');
 const regPasswordInput = document.getElementById('reg-password');
+const regPasswordConfirmInput = document.getElementById('reg-password-confirm');
 const regErrorBox = document.getElementById('reg-error');
 const linkSwitchToReg = document.getElementById('link-switch-to-reg');
 const linkSwitchToLogin = document.getElementById('link-switch-to-login');
 const googleAuthErrorBox = document.getElementById('google-auth-error');
+const googleAuthSection = document.getElementById('google-auth-section');
+const authOrDivider = document.getElementById('auth-or-divider');
 const btnCustomGoogleLogin = document.getElementById('btn-custom-google-login');
 const btnGoogleText = document.getElementById('btn-google-text');
 
@@ -187,12 +189,28 @@ async function handleGoogleCredentialResponse(response) {
 async function handleGoogleLoginWithToken(credential) {
   if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
 
+  let userInfo = null;
+  // If credential is an OAuth2 access token (not JWT), fetch user info directly in browser (fast & reliable)
+  if (credential && !credential.includes('.')) {
+    try {
+      const uRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { 'Authorization': `Bearer ${credential}` }
+      });
+      if (uRes.ok) {
+        userInfo = await uRes.json();
+      }
+    } catch (e) {
+      console.warn('Browser direct Google userinfo fetch fallback:', e);
+    }
+  }
+
   try {
     const res = await fetch(`${API}/api/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         credential: credential,
+        user_info: userInfo,
         guest_session_id: guestSessionId
       })
     });
@@ -276,7 +294,8 @@ function switchAuthTab(mode) {
   if (mode === 'register') {
     if (authModalTitle) authModalTitle.textContent = 'Tạo tài khoản mới';
     if (authModalSubtitle) authModalSubtitle.textContent = 'Đăng ký để lưu trữ video và quản lý dự án vĩnh viễn';
-    if (btnGoogleText) btnGoogleText.textContent = 'Đăng ký bằng Google';
+    if (googleAuthSection) googleAuthSection.style.display = 'none';
+    if (authOrDivider) authOrDivider.style.display = 'none';
     if (tabAuthRegister) tabAuthRegister.classList.add('active');
     if (tabAuthLogin) tabAuthLogin.classList.remove('active');
     if (formLogin) formLogin.style.display = 'none';
@@ -286,11 +305,13 @@ function switchAuthTab(mode) {
       void formRegister.offsetWidth; // Trigger reflow for CSS animation
       formRegister.classList.add('auth-form');
     }
-    if (regUsernameInput) setTimeout(() => regUsernameInput.focus(), 50);
+    if (regEmailInput) setTimeout(() => regEmailInput.focus(), 50);
   } else {
     if (authModalTitle) authModalTitle.textContent = 'Chào mừng trở lại!';
     if (authModalSubtitle) authModalSubtitle.textContent = 'Đăng nhập để lưu trữ video và quản lý dự án của bạn';
     if (btnGoogleText) btnGoogleText.textContent = 'Đăng nhập bằng Google';
+    if (googleAuthSection) googleAuthSection.style.display = 'block';
+    if (authOrDivider) authOrDivider.style.display = 'flex';
     if (tabAuthLogin) tabAuthLogin.classList.add('active');
     if (tabAuthRegister) tabAuthRegister.classList.remove('active');
     if (formRegister) formRegister.style.display = 'none';
@@ -353,15 +374,23 @@ async function handleLoginSubmit(e) {
 async function handleRegisterSubmit(e) {
   e.preventDefault();
   if (regErrorBox) regErrorBox.style.display = 'none';
-  const username = regUsernameInput.value.trim();
-  const email = regEmailInput.value.trim();
-  const password = regPasswordInput.value;
+  const email = regEmailInput ? regEmailInput.value.trim() : '';
+  const password = regPasswordInput ? regPasswordInput.value : '';
+  const passwordConfirm = regPasswordConfirmInput ? regPasswordConfirmInput.value : '';
+
+  if (password !== passwordConfirm) {
+    if (regErrorBox) {
+      regErrorBox.textContent = 'Mật khẩu nhập lại không khớp, vui lòng kiểm tra lại!';
+      regErrorBox.style.display = 'block';
+    }
+    return;
+  }
 
   try {
     const res = await apiFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password, guest_session_id: guestSessionId })
+      body: JSON.stringify({ email, password, password_confirm: passwordConfirm, guest_session_id: guestSessionId })
     });
 
     let data;
@@ -701,12 +730,24 @@ async function deleteVideoProject(id, event) {
   try {
     const res = await apiFetch(`/api/video/${id}`, { method: 'DELETE' });
     if (res.ok) {
-      loadVideoList();
+      if (currentVideoId === id) {
+        currentVideoId = null;
+        if (typeof stopAllMedia === 'function') stopAllMedia();
+        if (workspaceScreen) workspaceScreen.style.display = 'none';
+        if (startScreen) startScreen.style.display = '';
+      }
+      await loadVideoList();
     } else {
-      alert("Xóa dự án thất bại.");
+      let errMsg = "Xóa dự án thất bại.";
+      try {
+        const data = await res.json();
+        if (data.detail) errMsg = data.detail;
+      } catch (e) {}
+      alert(errMsg);
     }
   } catch (err) {
     console.error("Lỗi khi xóa dự án:", err);
+    alert("Lỗi khi xóa dự án: " + err.message);
   }
 }
 window.deleteVideoProject = deleteVideoProject;

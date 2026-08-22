@@ -133,9 +133,10 @@ class TTSSynthesizePayload(BaseModel):
 
 
 class RegisterPayload(BaseModel):
-    username: str
     email: str
     password: str
+    password_confirm: Optional[str] = None
+    username: Optional[str] = None
     guest_session_id: Optional[str] = None
 
 
@@ -146,15 +147,21 @@ class LoginPayload(BaseModel):
 
 
 class GoogleAuthPayload(BaseModel):
-    credential: str
+    credential: Optional[str] = None
+    user_info: Optional[dict] = None
     guest_session_id: Optional[str] = None
 
 
 GOOGLE_CLIENT_ID = "788558575113-7rlnllf0etgn3f9u4kooa8he3t3vl7ur.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = ""
 
-# Auto load from client_secret_*.json
-_secret_files = list(Path(__file__).parent.parent.glob("client_secret_*.json")) + list(Path(__file__).parent.glob("client_secret_*.json"))
+# Auto load from client_secret_*.json or authorized.json
+_secret_files = (
+    list(Path(__file__).parent.parent.glob("client_secret_*.json")) + 
+    list(Path(__file__).parent.glob("client_secret_*.json")) +
+    list(Path(__file__).parent.parent.glob("authorized*.json")) +
+    list((Path(__file__).parent / "storage").glob("authorized*.json"))
+)
 if _secret_files:
     try:
         with open(_secret_files[0], "r", encoding="utf-8") as _f:
@@ -187,7 +194,7 @@ def get_current_identity(request: Request) -> dict:
 def verify_project_ownership(video_id: str, identity: dict) -> dict:
     video = videos_db.get(video_id)
     if not video:
-        raise HTTPException(404, "Video not found")
+        raise HTTPException(404, "Dự án không tồn tại")
     
     owner_id = video.get("owner_id")
     # If legacy video (no owner_id), assign to current identity
@@ -198,7 +205,12 @@ def verify_project_ownership(video_id: str, identity: dict) -> dict:
         owner_id = identity["id"]
 
     if owner_id != identity["id"]:
-        raise HTTPException(403, "Bạn không có quyền truy cập dự án này")
+        if identity["type"] == "user" and video.get("owner_type") == "guest":
+            video["owner_id"] = identity["id"]
+            video["owner_type"] = "user"
+            save_db(videos_db)
+        else:
+            raise HTTPException(403, "Bạn không có quyền thao tác trên dự án này")
     
     video["last_accessed"] = time.time()
     return video
@@ -209,8 +221,11 @@ def verify_project_ownership(video_id: str, identity: dict) -> dict:
 # ==============================================================================
 @app.post("/api/auth/register")
 def auth_register(payload: RegisterPayload):
+    if payload.password_confirm and payload.password != payload.password_confirm:
+        raise HTTPException(400, "Mật khẩu nhập lại không khớp")
     try:
-        res = register_user(payload.username, payload.email, payload.password)
+        username = payload.username or payload.email.split("@")[0]
+        res = register_user(username, payload.email, payload.password)
         # Claim guest projects if guest_session_id provided
         if payload.guest_session_id:
             user_id = res["user"]["id"]
@@ -276,27 +291,33 @@ def _decode_google_jwt(token: str) -> dict:
 
 
 @app.post("/api/auth/google")
-def auth_google(payload: GoogleAuthPayload):
-    if not payload.credential:
-        raise HTTPException(400, "Thiếu Google credential token")
-    
+async def auth_google(payload: GoogleAuthPayload):
     try:
         data = None
-        # 1. If it's a JWT ID Token (3 parts separated by dots), decode locally instantly (0.1ms)
-        if "." in payload.credential and len(payload.credential.split(".")) == 3:
+        
+        # 1. If frontend already fetched user_info directly via client browser
+        if payload.user_info and isinstance(payload.user_info, dict):
+            if payload.user_info.get("email") and (payload.user_info.get("sub") or payload.user_info.get("id")):
+                data = payload.user_info
+
+        # 2. If it's a JWT ID Token (3 parts separated by dots), decode locally instantly (0.1ms)
+        if not data and payload.credential and "." in payload.credential and len(payload.credential.split(".")) == 3:
             try:
                 data = _decode_google_jwt(payload.credential)
             except Exception as e:
                 print(f"[JWT DECODE WARNING] {e}")
         
-        # 2. If it's an OAuth2 Access Token, fetch from Google userinfo API with short timeout
-        if not data:
-            import httpx
-            userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
-            with httpx.Client(timeout=5.0) as client:
-                resp = client.get(userinfo_url, headers={"Authorization": f"Bearer {payload.credential}"})
-                if resp.status_code == 200:
-                    data = resp.json()
+        # 3. If it's an OAuth2 Access Token, fetch from Google userinfo API asynchronously with strict timeout
+        if not data and payload.credential:
+            try:
+                import httpx
+                userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    resp = await client.get(userinfo_url, headers={"Authorization": f"Bearer {payload.credential}"})
+                    if resp.status_code == 200:
+                        data = resp.json()
+            except Exception as e:
+                print(f"[GOOGLE USERINFO ASYNC ERROR] {e}")
         
         if not data:
             raise ValueError("Không thể giải mã thông tin tài khoản Google")
@@ -329,7 +350,10 @@ def auth_google(payload: GoogleAuthPayload):
         return res
     except ValueError as e:
         raise HTTPException(400, f"Đăng nhập Google thất bại: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[GOOGLE AUTH ERROR] {e}")
         raise HTTPException(400, f"Đăng nhập Google thất bại: {str(e)}")
 
 
@@ -541,10 +565,10 @@ def get_transcribe_status(video_id: str, task_id: str, request: Request):
 @app.get("/api/videos")
 def list_videos(request: Request):
     identity = get_current_identity(request)
-    # Only return videos owned by this identity (or legacy unclaimed videos)
+    # Return videos owned by this identity, unclaimed legacy videos, or guest videos if logged in
     user_videos = [
         v for v in videos_db.values()
-        if v.get("owner_id") == identity["id"] or (not v.get("owner_id") and identity["type"] == "user")
+        if v.get("owner_id") == identity["id"] or not v.get("owner_id") or (identity["type"] == "user" and v.get("owner_type") == "guest")
     ]
     return user_videos
 
@@ -765,6 +789,17 @@ def download_file(filename: str, request: Request):
     )
 
 
+def _safe_unlink(path):
+    if not path:
+        return
+    try:
+        p = Path(path)
+        if p.exists() and p.is_file():
+            p.unlink()
+    except Exception as e:
+        print(f"[CLEANUP WARNING] Could not delete {path}: {e}")
+
+
 @app.delete("/api/video/{video_id}")
 def delete_video(video_id: str, request: Request):
     identity = get_current_identity(request)
@@ -774,20 +809,38 @@ def delete_video(video_id: str, request: Request):
         videos_db.pop(video_id, None)
         save_db(videos_db)
         
-    p = Path(video["path"])
-    if p.exists():
-        p.unlink()
+    filename = video.get("filename") or f"{video_id}.mp4"
+    path_val = video.get("path")
+    
+    # 1. Delete original upload files safely
+    if path_val:
+        _safe_unlink(path_val)
+        _safe_unlink(STORAGE_DIR / path_val)
+    _safe_unlink(UPLOAD_DIR / filename)
+    _safe_unlink(UPLOAD_DIR / f"{video_id}.mp4")
+    _safe_unlink(UPLOAD_DIR / f"{video_id}.mp4.tmp.mp4")
+    
+    # 2. Delete rendered output files
     out = video.get("output")
     if out:
-        op = OUTPUT_DIR / out
-        if op.exists():
-            op.unlink()
+        _safe_unlink(OUTPUT_DIR / out)
+    _safe_unlink(OUTPUT_DIR / f"output_{video_id}.mp4")
+    _safe_unlink(OUTPUT_DIR / f"audio_{video_id}.mp3")
+    
+    # 3. Delete reference audio
     ref = video.get("ref_audio_path")
     if ref:
-        rp = Path(ref)
-        if rp.exists():
-            rp.unlink()
-    return {"status": "deleted"}
+        _safe_unlink(ref)
+        _safe_unlink(REF_AUDIO_DIR / Path(ref).name)
+        
+    # 4. Delete all subtitle audio files for this video
+    try:
+        for sub_file in OUTPUT_DIR.glob(f"sub_audio_{video_id}_*"):
+            _safe_unlink(sub_file)
+    except Exception:
+        pass
+
+    return {"status": "deleted", "id": video_id}
 
 
 _TTS_REF_AUDIO_PATH = None
