@@ -78,7 +78,7 @@ app.add_middleware(
 # File-based database persistence
 import threading
 DB_FILE = STORAGE_DIR / "projects.json"
-db_lock = threading.Lock()
+db_lock = threading.RLock()
 
 def load_db():
     if DB_FILE.exists():
@@ -95,6 +95,11 @@ def save_db(db):
         try:
             with open(DB_FILE, "w", encoding="utf-8") as f:
                 json.dump(db, f, ensure_ascii=False, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except Exception:
+                    pass
         except Exception as e:
             print(f"Error saving database: {e}")
 
@@ -565,12 +570,55 @@ def get_transcribe_status(video_id: str, task_id: str, request: Request):
 @app.get("/api/videos")
 def list_videos(request: Request):
     identity = get_current_identity(request)
-    # Return videos owned by this identity, unclaimed legacy videos, or guest videos if logged in
     user_videos = [
         v for v in videos_db.values()
-        if v.get("owner_id") == identity["id"] or not v.get("owner_id") or (identity["type"] == "user" and v.get("owner_type") == "guest")
+        if v.get("owner_id") == identity["id"]
     ]
     return user_videos
+
+
+@app.delete("/api/video/{video_id}")
+def delete_video(video_id: str, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
+
+    # 1. Delete video file
+    try:
+        video_path = video.get("path")
+        if video_path and os.path.isfile(video_path):
+            os.remove(video_path)
+    except Exception as e:
+        print(f"[DELETE ERROR] video file: {e}")
+
+    # 2. Delete ref audio if exists
+    try:
+        ref_path = video.get("ref_audio_path")
+        if ref_path and os.path.isfile(ref_path):
+            os.remove(ref_path)
+    except Exception as e:
+        print(f"[DELETE ERROR] ref audio: {e}")
+
+    # 3. Delete generated subtitle audio / temp files
+    try:
+        for f in OUTPUT_DIR.glob(f"sub_audio_{video_id}_*.wav"):
+            try:
+                f.unlink()
+            except Exception:
+                pass
+        for f in OUTPUT_DIR.glob(f"dubbed_{video_id}_*.mp4"):
+            try:
+                f.unlink()
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"[DELETE ERROR] output files: {e}")
+
+    # 4. Remove from database
+    with db_lock:
+        videos_db.pop(video_id, None)
+        save_db(videos_db)
+
+    return {"status": "ok", "message": "Đã xóa dự án thành công"}
 
 
 @app.get("/api/video/{video_id}")
@@ -1345,4 +1393,4 @@ if __name__ == "__main__":
     else:
         print("[HTTP] Starting HTTP server at: http://0.0.0.0:9090")
 
-    uvicorn.run(app, host="0.0.0.0", port=9090, **ssl_kwargs)
+    uvicorn.run("main:app", host="0.0.0.0", port=9090, reload=True, reload_dirs=[str(Path(__file__).parent)], **ssl_kwargs)

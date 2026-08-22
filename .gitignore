@@ -16,3 +16,4 @@ output
 Spark-*
 unsloth_*
 spark_tts_lora
+*.json
