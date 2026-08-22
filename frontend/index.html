@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1.1.1">
+  <link rel="stylesheet" href="style.css?v=1.1.5">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div id="app">
@@ -25,31 +26,54 @@
             <p>Tự động tạo phụ đề & chuyển đổi giọng nói (TTS) chất lượng cao</p>
           </div>
         </div>
-        <div class="nav-tabs">
-          <button id="nav-video-editor" class="nav-tab active">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Video Editor
-          </button>
-          <button id="nav-youtube" class="nav-tab">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            YouTube
-          </button>
-          <button id="nav-tts" class="nav-tab">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-            Text to Speech
-          </button>
-          <button id="nav-music" class="nav-tab">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
-            Music Video
-          </button>
+        <div class="header-right-group">
+          <div class="nav-tabs">
+            <button id="nav-video-editor" class="nav-tab active">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Video Editor
+            </button>
+            <button id="nav-youtube" class="nav-tab">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              YouTube
+            </button>
+            <button id="nav-tts" class="nav-tab">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              Text to Speech
+            </button>
+            <button id="nav-music" class="nav-tab">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+              Music Video
+            </button>
+          </div>
+
+          <!-- Auth & User State Area -->
+          <div id="user-auth-area" class="user-auth-area">
+            <span class="badge-guest" title="Dữ liệu phiên khách tự xóa sau 2h không hoạt động">
+              <span class="guest-dot"></span> Khách
+            </span>
+            <button id="btn-open-login" class="btn-auth-login">Đăng nhập</button>
+            <button id="btn-open-register" class="btn-auth-register">Đăng ký</button>
+          </div>
+
+          <div id="user-profile-area" class="user-profile-area" style="display:none;">
+            <div class="user-badge" title="Tài khoản đã đăng nhập">
+              <div class="user-avatar" id="user-avatar-initial">U</div>
+              <span id="user-display-name" class="user-display-name">Username</span>
+            </div>
+            <button id="btn-logout" class="btn-auth-logout" title="Đăng xuất">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -96,6 +120,14 @@
           <p>Danh sách các video đã tải lên gần đây của bạn</p>
         </div>
         
+        <!-- Guest Mode Alert Banner -->
+        <div id="guest-warning-banner" class="guest-warning-banner" style="display:none;">
+          <div class="guest-banner-icon">💡</div>
+          <div class="guest-banner-text">
+            <span><strong>Chế độ Khách:</strong> Video sẽ tự động xóa sau 2 giờ. <a href="#" id="link-banner-login">Đăng nhập</a> hoặc <a href="#" id="link-banner-register">Đăng ký</a> để lưu vĩnh viễn!</span>
+          </div>
+        </div>
+
         <div id="recent-projects-container" class="recent-projects-list styled-scroll">
           <div class="projects-loading">Đang tải danh sách dự án...</div>
         </div>
@@ -638,7 +670,73 @@
       </div>
     </div>
   </div>
+  </div>
 
-  <script src="app_v7.js?v=1.1.1"></script>
+  <!-- AUTH MODAL (LOGIN & REGISTER) -->
+  <div id="auth-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-card auth-modal-card">
+      <div class="auth-modal-header">
+        <div class="auth-tabs">
+          <button type="button" id="tab-auth-login" class="auth-tab-btn active">Đăng nhập</button>
+          <button type="button" id="tab-auth-register" class="auth-tab-btn">Đăng ký tài khoản</button>
+        </div>
+        <button type="button" id="btn-close-auth" class="modal-close-icon" title="Đóng">&times;</button>
+      </div>
+
+      <!-- Google Sign In Area -->
+      <div class="google-auth-section">
+        <div id="google-btn-slot" class="google-btn-wrapper"></div>
+        <div id="google-auth-error" class="auth-error-msg" style="display:none; margin-top: 10px;"></div>
+      </div>
+
+      <div class="auth-or-divider">
+        <span>HOẶC TIẾP TỤC VỚI</span>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login" class="auth-form">
+        <div class="input-group-clean">
+          <label for="login-username">Tên người dùng hoặc Email</label>
+          <input type="text" id="login-username" class="styled-text-input" placeholder="Nhập username hoặc email..." required autocomplete="username">
+        </div>
+        <div class="input-group-clean" style="margin-top: 14px;">
+          <label for="login-password">Mật khẩu</label>
+          <input type="password" id="login-password" class="styled-text-input" placeholder="Nhập mật khẩu..." required autocomplete="current-password">
+        </div>
+        <div id="login-error" class="auth-error-msg" style="display:none;"></div>
+        <button type="submit" id="btn-submit-login" class="btn-action-primary btn-auth-submit" style="margin-top: 20px; width: 100%;">
+          Đăng nhập
+        </button>
+        <div class="auth-switch-hint">
+          Chưa có tài khoản? <a href="#" id="link-switch-to-reg">Đăng ký ngay</a>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" class="auth-form" style="display:none;">
+        <div class="input-group-clean">
+          <label for="reg-username">Tên người dùng (Username)</label>
+          <input type="text" id="reg-username" class="styled-text-input" placeholder="Ví dụ: hoang123" required minlength="3" autocomplete="username">
+        </div>
+        <div class="input-group-clean" style="margin-top: 14px;">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" class="styled-text-input" placeholder="email@example.com" required autocomplete="email">
+        </div>
+        <div class="input-group-clean" style="margin-top: 14px;">
+          <label for="reg-password">Mật khẩu (Tối thiểu 6 ký tự)</label>
+          <input type="password" id="reg-password" class="styled-text-input" placeholder="Tối thiểu 6 ký tự..." required minlength="6" autocomplete="new-password">
+        </div>
+        <div id="reg-error" class="auth-error-msg" style="display:none;"></div>
+        <button type="submit" id="btn-submit-register" class="btn-action-primary btn-auth-submit" style="margin-top: 20px; width: 100%;">
+          Tạo tài khoản mới
+        </button>
+        <div class="auth-switch-hint">
+          Đã có tài khoản? <a href="#" id="link-switch-to-login">Đăng nhập</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app_v7.js?v=1.1.5"></script>
 </body>
 </html>

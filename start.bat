@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 cd /d "%~dp0"
 
 echo ====================================
@@ -19,7 +19,7 @@ echo [1/3] Cai dat dependencies...
 uv sync
 
 :: Chay backend
-echo [2/3] Khoi dong backend (port 9090)...
+echo [2/3] Khoi dong backend HTTPS (port 9090)...
 start "Video Editor Backend" cmd /c "cd /d "%~dp0backend" && uv run python main.py"
 
 :: Cho backend chay
@@ -27,14 +27,14 @@ timeout /t 3 /nobreak >nul
 
 :: Mo frontend
 echo [3/3] Mo frontend...
-start "" "http://localhost:9090/"
+start "" "https://localhost:9090/"
 
 echo.
 echo ====================================
 echo  He thong da khoi dong!
-echo  - Backend: http://localhost:9090
+echo  - Backend: https://localhost:9090
 echo  - Frontend: da mo trong trinh duyet
-echo  - API docs: http://localhost:9090/docs
+echo  - API docs: https://localhost:9090/docs
 echo ====================================
 echo.
 echo Nhan Ctrl+C trong cua so backend de dung.

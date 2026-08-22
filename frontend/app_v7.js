@@ -1,8 +1,49 @@
-console.log("app.js loaded. Version: 1.1.0 (YouTube + WhisperX)");
-const API = 'http://localhost:9090';
+console.log("app.js loaded. Version: 1.1.0 (YouTube + WhisperX + Auth)");
+const API = (window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:9090';
+
+// --- Auth State & Guest Session Management ---
+let authToken = localStorage.getItem('auth_token') || null;
+let currentUser = null;
+try {
+  currentUser = JSON.parse(localStorage.getItem('current_user') || 'null');
+} catch (e) { currentUser = null; }
+
+let guestSessionId = localStorage.getItem('guest_session_id');
+if (!guestSessionId) {
+  guestSessionId = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+  localStorage.setItem('guest_session_id', guestSessionId);
+}
+
+// --- Universal apiFetch wrapper with Auth / Guest headers ---
+async function apiFetch(endpoint, options = {}) {
+  const url = endpoint.startsWith('http') ? endpoint : `${API}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  options.headers = options.headers || {};
+  
+  if (authToken) {
+    options.headers['Authorization'] = `Bearer ${authToken}`;
+  } else {
+    options.headers['X-Guest-Session'] = guestSessionId;
+  }
+
+  const resp = await fetch(url, options);
+  if (resp.status === 401 || resp.status === 403) {
+    if (authToken) {
+      console.warn('Phiên đăng nhập hết hạn hoặc không hợp lệ. Chuyển sang chế độ Khách.');
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('current_user');
+      updateAuthUI();
+      if (typeof loadVideoList === 'function') loadVideoList();
+    }
+  }
+  return resp;
+}
+
 let currentVideoId = null;
 let subtitles = [];
 let subCounter = 0;
+
 // --- DOM refs ---
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -22,6 +63,281 @@ const workspaceScreen = document.getElementById('workspace-screen');
 const youtubeScreen = document.getElementById('youtube-screen');
 const ttsScreen = document.getElementById('tts-screen');
 const musicScreen = document.getElementById('music-screen');
+
+// Auth & User Header DOM refs
+const userAuthArea = document.getElementById('user-auth-area');
+const userProfileArea = document.getElementById('user-profile-area');
+const userAvatarInitial = document.getElementById('user-avatar-initial');
+const userDisplayName = document.getElementById('user-display-name');
+const btnOpenLogin = document.getElementById('btn-open-login');
+const btnOpenRegister = document.getElementById('btn-open-register');
+const btnLogout = document.getElementById('btn-logout');
+const guestWarningBanner = document.getElementById('guest-warning-banner');
+const linkBannerLogin = document.getElementById('link-banner-login');
+const linkBannerRegister = document.getElementById('link-banner-register');
+
+// Auth Modal DOM refs
+const authModal = document.getElementById('auth-modal');
+const tabAuthLogin = document.getElementById('tab-auth-login');
+const tabAuthRegister = document.getElementById('tab-auth-register');
+const btnCloseAuth = document.getElementById('btn-close-auth');
+const formLogin = document.getElementById('form-login');
+const formRegister = document.getElementById('form-register');
+const loginUsernameInput = document.getElementById('login-username');
+const loginPasswordInput = document.getElementById('login-password');
+const loginErrorBox = document.getElementById('login-error');
+const regUsernameInput = document.getElementById('reg-username');
+const regEmailInput = document.getElementById('reg-email');
+const regPasswordInput = document.getElementById('reg-password');
+const regErrorBox = document.getElementById('reg-error');
+const linkSwitchToReg = document.getElementById('link-switch-to-reg');
+const linkSwitchToLogin = document.getElementById('link-switch-to-login');
+const googleAuthErrorBox = document.getElementById('google-auth-error');
+
+let googleClientId = "788558575113-7rlnllf0etgn3f9u4kooa8he3t3vl7ur.apps.googleusercontent.com";
+
+async function fetchAuthConfig() {
+  try {
+    const res = await fetch(`${API}/api/auth/config`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.google_client_id) {
+        googleClientId = data.google_client_id;
+      }
+    }
+  } catch (e) {}
+  initGoogleAuth();
+}
+
+function initGoogleAuth() {
+  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+    setTimeout(initGoogleAuth, 300);
+    return;
+  }
+  if (!googleClientId) return;
+
+  try {
+    window.google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleCredentialResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+
+    const btnSlot = document.getElementById('google-btn-slot');
+    if (btnSlot) {
+      btnSlot.innerHTML = '';
+      window.google.accounts.id.renderButton(
+        btnSlot,
+        {
+          theme: 'filled_black',
+          size: 'large',
+          type: 'standard',
+          shape: 'pill',
+          text: 'continue_with',
+          logo_alignment: 'left',
+          width: 300
+        }
+      );
+    }
+  } catch (err) {
+    console.warn("Google Auth Init Warning:", err);
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  const credential = response.credential;
+  if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        credential: credential,
+        guest_session_id: guestSessionId
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || "Đăng nhập Google thất bại");
+    }
+
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('auth_token', authToken);
+    localStorage.setItem('current_user', JSON.stringify(currentUser));
+
+    closeAuthModal();
+    updateAuthUI();
+    await loadVideoList();
+  } catch (err) {
+    if (googleAuthErrorBox) {
+      googleAuthErrorBox.textContent = err.message;
+      googleAuthErrorBox.style.display = 'block';
+    } else {
+      alert("Đăng nhập Google thất bại: " + err.message);
+    }
+  }
+}
+
+function updateAuthUI() {
+  if (currentUser && authToken) {
+    if (userAuthArea) userAuthArea.style.display = 'none';
+    if (userProfileArea) userProfileArea.style.display = 'flex';
+    if (userDisplayName) userDisplayName.textContent = currentUser.username || 'User';
+    if (userAvatarInitial) {
+      if (currentUser.avatar) {
+        userAvatarInitial.innerHTML = `<img src="${currentUser.avatar}" alt="Avatar" class="user-avatar-img" referrerpolicy="no-referrer">`;
+        userAvatarInitial.style.background = 'transparent';
+      } else {
+        userAvatarInitial.textContent = (currentUser.username || 'U')[0].toUpperCase();
+        userAvatarInitial.style.background = '';
+      }
+    }
+    if (guestWarningBanner) guestWarningBanner.style.display = 'none';
+  } else {
+    if (userAuthArea) userAuthArea.style.display = 'flex';
+    if (userProfileArea) userProfileArea.style.display = 'none';
+    if (guestWarningBanner) guestWarningBanner.style.display = 'flex';
+  }
+}
+
+function openAuthModal(mode = 'login') {
+  if (!authModal) return;
+  authModal.style.display = 'flex';
+  if (loginErrorBox) loginErrorBox.style.display = 'none';
+  if (regErrorBox) regErrorBox.style.display = 'none';
+  if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
+
+  initGoogleAuth();
+
+  if (mode === 'register') {
+    if (tabAuthRegister) tabAuthRegister.classList.add('active');
+    if (tabAuthLogin) tabAuthLogin.classList.remove('active');
+    if (formRegister) formRegister.style.display = 'block';
+    if (formLogin) formLogin.style.display = 'none';
+    if (regUsernameInput) regUsernameInput.focus();
+  } else {
+    if (tabAuthLogin) tabAuthLogin.classList.add('active');
+    if (tabAuthRegister) tabAuthRegister.classList.remove('active');
+    if (formLogin) formLogin.style.display = 'block';
+    if (formRegister) formRegister.style.display = 'none';
+    if (loginUsernameInput) loginUsernameInput.focus();
+  }
+}
+
+function closeAuthModal() {
+  if (authModal) authModal.style.display = 'none';
+}
+
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  if (loginErrorBox) loginErrorBox.style.display = 'none';
+  const login_id = loginUsernameInput.value.trim();
+  const password = loginPasswordInput.value;
+
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login_id, password, guest_session_id: guestSessionId })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'Đăng nhập thất bại');
+    }
+
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('auth_token', authToken);
+    localStorage.setItem('current_user', JSON.stringify(currentUser));
+    
+    closeAuthModal();
+    updateAuthUI();
+    await loadVideoList();
+  } catch (err) {
+    if (loginErrorBox) {
+      loginErrorBox.textContent = err.message;
+      loginErrorBox.style.display = 'block';
+    }
+  }
+}
+
+async function handleRegisterSubmit(e) {
+  e.preventDefault();
+  if (regErrorBox) regErrorBox.style.display = 'none';
+  const username = regUsernameInput.value.trim();
+  const email = regEmailInput.value.trim();
+  const password = regPasswordInput.value;
+
+  try {
+    const res = await fetch(`${API}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, guest_session_id: guestSessionId })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'Đăng ký thất bại');
+    }
+
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('auth_token', authToken);
+    localStorage.setItem('current_user', JSON.stringify(currentUser));
+    
+    closeAuthModal();
+    updateAuthUI();
+    await loadVideoList();
+  } catch (err) {
+    if (regErrorBox) {
+      regErrorBox.textContent = err.message;
+      regErrorBox.style.display = 'block';
+    }
+  }
+}
+
+async function handleLogout() {
+  if (confirm('Bạn có chắc muốn đăng xuất?')) {
+    try {
+      if (authToken) {
+        await apiFetch('/api/auth/logout', { method: 'POST' });
+      }
+    } catch (e) {}
+    
+    authToken = null;
+    currentUser = null;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('current_user');
+    
+    guestSessionId = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    localStorage.setItem('guest_session_id', guestSessionId);
+    
+    updateAuthUI();
+    await loadVideoList();
+  }
+}
+
+// Auth Event Listeners
+if (btnOpenLogin) btnOpenLogin.addEventListener('click', () => openAuthModal('login'));
+if (btnOpenRegister) btnOpenRegister.addEventListener('click', () => openAuthModal('register'));
+if (linkBannerLogin) linkBannerLogin.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('login'); });
+if (linkBannerRegister) linkBannerRegister.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('register'); });
+if (linkSwitchToReg) linkSwitchToReg.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('register'); });
+if (linkSwitchToLogin) linkSwitchToLogin.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('login'); });
+if (tabAuthLogin) tabAuthLogin.addEventListener('click', () => openAuthModal('login'));
+if (tabAuthRegister) tabAuthRegister.addEventListener('click', () => openAuthModal('register'));
+if (btnCloseAuth) btnCloseAuth.addEventListener('click', closeAuthModal);
+if (authModal) {
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) closeAuthModal();
+  });
+}
+if (formLogin) formLogin.addEventListener('submit', handleLoginSubmit);
+if (formRegister) formRegister.addEventListener('submit', handleRegisterSubmit);
+if (btnLogout) btnLogout.addEventListener('click', handleLogout);
 
 const btnOpenProject = document.getElementById('btn-open-project');
 const btnBackToStart = document.getElementById('btn-back-to-start');
@@ -217,6 +533,11 @@ function uploadVideo(file) {
   });
 
   xhr.open('POST', `${API}/api/upload`);
+  if (authToken) {
+    xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+  } else {
+    xhr.setRequestHeader('X-Guest-Session', guestSessionId);
+  }
   xhr.send(formData);
 }
 
@@ -226,7 +547,7 @@ async function loadVideoList() {
   if (!container) return;
 
   try {
-    const res = await fetch(`${API}/api/videos`);
+    const res = await apiFetch('/api/videos');
     const videos = await res.json();
 
     if (videos.length === 0) {
@@ -283,7 +604,7 @@ async function deleteVideoProject(id, event) {
   if (event) event.stopPropagation();
   if (!confirm("Bạn có chắc chắn muốn xóa dự án này? Thao tác này không thể hoàn tác.")) return;
   try {
-    const res = await fetch(`${API}/api/video/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/video/${id}`, { method: 'DELETE' });
     if (res.ok) {
       loadVideoList();
     } else {
@@ -309,7 +630,7 @@ function resetVideoPlayer() {
 async function selectVideoWithRetry(id, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(`${API}/api/video/${id}`);
+      const res = await apiFetch(`/api/video/${id}`);
       if (res.ok) {
         await selectVideo(id);
         return;
@@ -327,7 +648,7 @@ async function selectVideoWithRetry(id, maxRetries = 3) {
 async function selectVideo(id) {
   currentVideoId = id;
   try {
-    const res = await fetch(`${API}/api/video/${id}`);
+    const res = await apiFetch(`/api/video/${id}`);
     if (!res.ok) {
       throw new Error(`Lỗi kết nối API (Status: ${res.status})`);
     }
@@ -558,7 +879,7 @@ async function saveSubtitlesToBackend() {
     voice_lang: voiceLang.value,
   };
   try {
-    await fetch(`${API}/api/video/${currentVideoId}/subtitles`, {
+    await apiFetch(`/api/video/${currentVideoId}/subtitles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -586,7 +907,7 @@ async function synthesizeSubAudio(idx) {
     btn.textContent = '⏳';
   }
   try {
-    const res = await fetch(`${API}/api/video/${currentVideoId}/subtitle/${idx}/synthesize`, { method: 'POST' });
+    const res = await apiFetch(`/api/video/${currentVideoId}/subtitle/${idx}/synthesize`, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || `HTTP ${res.status}`);
@@ -803,7 +1124,7 @@ btnStt.addEventListener('click', async () => {
 
   try {
     const lang = sttLang ? sttLang.value : 'en';
-    const res = await fetch(`${API}/api/video/${currentVideoId}/transcribe?language=${lang}`, { method: 'POST' });
+    const res = await apiFetch(`/api/video/${currentVideoId}/transcribe?language=${lang}`, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || `HTTP ${res.status}`);
@@ -823,7 +1144,7 @@ btnStt.addEventListener('click', async () => {
           return;
         }
 
-        const statusRes = await fetch(`${API}/api/video/${currentVideoId}/transcribe-status?task_id=${task_id}`);
+        const statusRes = await apiFetch(`/api/video/${currentVideoId}/transcribe-status?task_id=${task_id}`);
         if (!statusRes.ok) {
           clearInterval(pollInterval);
           throw new Error(`HTTP ${statusRes.status}`);
@@ -892,7 +1213,7 @@ async function saveAndRender(isAudio) {
   };
 
   try {
-    await fetch(`${API}/api/video/${currentVideoId}/subtitles`, {
+    await apiFetch(`/api/video/${currentVideoId}/subtitles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -910,11 +1231,11 @@ async function saveAndRender(isAudio) {
   btnRenderAudio.disabled = true;
 
   const endpoint = isAudio
-    ? `${API}/api/video/${currentVideoId}/render-voice-only`
-    : `${API}/api/video/${currentVideoId}/render`;
+    ? `/api/video/${currentVideoId}/render-voice-only`
+    : `/api/video/${currentVideoId}/render`;
 
   try {
-    const res = await fetch(endpoint, { method: 'POST' });
+    const res = await apiFetch(endpoint, { method: 'POST' });
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
@@ -924,7 +1245,7 @@ async function saveAndRender(isAudio) {
     // Poll status every 1 second to update real-time progress
     const pollInterval = setInterval(async () => {
       try {
-        const statusRes = await fetch(`${API}/api/video/${currentVideoId}/render-status`);
+        const statusRes = await apiFetch(`/api/video/${currentVideoId}/render-status`);
         if (!statusRes.ok) {
           throw new Error(`Lỗi kết nối kiểm tra tiến trình (HTTP ${statusRes.status})`);
         }
@@ -1058,7 +1379,7 @@ async function uploadRefAudio() {
   refAudioStatus.className = 'ref-audio-status loading';
 
   try {
-    const res = await fetch(`${API}/api/video/${currentVideoId}/ref-audio`, {
+    const res = await apiFetch(`/api/video/${currentVideoId}/ref-audio`, {
       method: 'POST',
       body: formData,
     });
@@ -1083,7 +1404,7 @@ if (btnUploadRefAudio) {
 async function loadRefAudioStatus() {
   if (!currentVideoId || !refAudioStatus) return;
   try {
-    const res = await fetch(`${API}/api/video/${currentVideoId}`);
+    const res = await apiFetch(`/api/video/${currentVideoId}`);
     if (!res.ok) return;
     const video = await res.json();
     if (video.ref_audio_path) {
@@ -1327,7 +1648,7 @@ const settingsTestResult = document.getElementById('settings-test-result');
 
 async function loadSettings() {
   try {
-    const res = await fetch(`${API}/api/settings`);
+    const res = await apiFetch('/api/settings');
     const s = await res.json();
     if (settingsApiUrl) settingsApiUrl.value = s.api_url || 'http://localhost:8080';
     if (settingsModel) settingsModel.value = s.model || '';
@@ -1344,7 +1665,7 @@ async function saveSettings() {
     dst_lang: settingsDstLang ? settingsDstLang.value : 'vi',
   };
   try {
-    await fetch(`${API}/api/settings`, {
+    await apiFetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1471,7 +1792,7 @@ window.translateSub = async function(idx) {
   textarea.value = 'Đang dịch...';
 
   try {
-    const res = await fetch(`${API}/api/video/${currentVideoId}/translate-sub`, {
+    const res = await apiFetch(`/api/video/${currentVideoId}/translate-sub`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: textToTranslate, source_lang: src, target_lang: dst }),
@@ -1548,7 +1869,7 @@ btnYoutubeDownload.addEventListener('click', async () => {
   formData.append('url', url);
 
   try {
-    const res = await fetch(`${API}/api/youtube-download`, {
+    const res = await apiFetch('/api/youtube-download', {
       method: 'POST',
       body: formData,
     });
@@ -1607,7 +1928,7 @@ btnYoutubeTranscribe.addEventListener('click', async () => {
   youtubeTranscribeFill.style.width = '0%';
 
   try {
-    const res = await fetch(`${API}/api/video/${youtubeVideoId}/transcribe`, {
+    const res = await apiFetch(`/api/video/${youtubeVideoId}/transcribe`, {
       method: 'POST',
     });
 
@@ -1634,7 +1955,7 @@ btnYoutubeTranscribe.addEventListener('click', async () => {
           return;
         }
 
-        const statusRes = await fetch(`${API}/api/video/${youtubeVideoId}/transcribe-status?task_id=${task_id}`);
+        const statusRes = await apiFetch(`/api/video/${youtubeVideoId}/transcribe-status?task_id=${task_id}`);
         if (!statusRes.ok) {
           clearInterval(pollInterval);
           youtubeTranscribeText.textContent = 'Lỗi: ' + `HTTP ${statusRes.status}`;
@@ -1765,7 +2086,7 @@ if (btnTtsUploadRef) {
     ttsRefStatus.className = 'ref-audio-status loading';
     btnTtsUploadRef.disabled = true;
     try {
-      const res = await fetch(`${API}/api/tts/ref-audio`, { method: 'POST', body: formData });
+      const res = await apiFetch('/api/tts/ref-audio', { method: 'POST', body: formData });
       if (!res.ok) {
         const errBody = await res.text().catch(() => '');
         throw new Error(`HTTP ${res.status}: ${errBody}`);
@@ -1809,7 +2130,7 @@ btnTtsGenerate.addEventListener('click', async () => {
   btnTtsGenerate.disabled = true;
   try {
     const outputMode = document.getElementById('tts-output-mode') ? document.getElementById('tts-output-mode').value : 'single';
-    const res = await fetch(`${API}/api/tts/synthesize`, {
+    const res = await apiFetch('/api/tts/synthesize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1840,7 +2161,7 @@ btnTtsGenerate.addEventListener('click', async () => {
           return;
         }
 
-        const statusRes = await fetch(`${API}/api/tts/synthesize/${task_id}/status`);
+        const statusRes = await apiFetch(`/api/tts/synthesize/${task_id}/status`);
         if (!statusRes.ok) {
           clearInterval(pollInterval);
           ttsProgressText.textContent = 'Lỗi: ' + `HTTP ${statusRes.status}`;
@@ -2944,6 +3265,31 @@ window.addEventListener('resize', () => {
 });
 
 // --- Init ---
+async function checkAuthMe() {
+  if (!authToken) {
+    updateAuthUI();
+    return;
+  }
+  try {
+    const res = await apiFetch('/api/auth/me');
+    const data = await res.json();
+    if (data.authenticated && data.user) {
+      currentUser = data.user;
+      localStorage.setItem('current_user', JSON.stringify(currentUser));
+    } else {
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('current_user');
+    }
+  } catch (e) {
+    console.warn('Không thể xác thực token với server:', e);
+  }
+  updateAuthUI();
+}
+
+checkAuthMe();
+fetchAuthConfig();
 loadVideoList();
 setupTimelineEvents();
 loadSettings();

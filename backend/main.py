@@ -99,6 +99,8 @@ videos_db = load_db()
 tts_tasks: dict[str, dict] = {}
 tts_tasks_lock = threading.Lock()
 
+from users import register_user, authenticate_user, authenticate_google_user, get_session_user, delete_session
+
 
 class SubtitleItem(BaseModel):
     id: str
@@ -124,13 +126,193 @@ class TTSSynthesizePayload(BaseModel):
     output_mode: str = "single"
 
 
+class RegisterPayload(BaseModel):
+    username: str
+    email: str
+    password: str
+    guest_session_id: Optional[str] = None
+
+
+class LoginPayload(BaseModel):
+    login_id: str
+    password: str
+    guest_session_id: Optional[str] = None
+
+
+class GoogleAuthPayload(BaseModel):
+    credential: str
+    guest_session_id: Optional[str] = None
+
+
+GOOGLE_CLIENT_ID = "788558575113-7rlnllf0etgn3f9u4kooa8he3t3vl7ur.apps.googleusercontent.com"
+
+
+def get_current_identity(request: Request) -> dict:
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        user = get_session_user(token)
+        if user:
+            return {"type": "user", "id": user["id"], "user": user}
+    
+    # Guest mode fallback
+    guest_id = request.headers.get("X-Guest-Session") or request.headers.get("x-guest-session")
+    if not guest_id or len(guest_id) < 6:
+        guest_id = "guest_" + uuid.uuid4().hex[:12]
+    
+    return {"type": "guest", "id": guest_id, "user": None}
+
+
+def verify_project_ownership(video_id: str, identity: dict) -> dict:
+    video = videos_db.get(video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+    
+    owner_id = video.get("owner_id")
+    # If legacy video (no owner_id), assign to current identity
+    if not owner_id:
+        video["owner_id"] = identity["id"]
+        video["owner_type"] = identity["type"]
+        save_db(videos_db)
+        owner_id = identity["id"]
+
+    if owner_id != identity["id"]:
+        raise HTTPException(403, "Bạn không có quyền truy cập dự án này")
+    
+    video["last_accessed"] = time.time()
+    return video
+
+
+# ==============================================================================
+# AUTHENTICATION ENDPOINTS
+# ==============================================================================
+@app.post("/api/auth/register")
+def auth_register(payload: RegisterPayload):
+    try:
+        res = register_user(payload.username, payload.email, payload.password)
+        # Claim guest projects if guest_session_id provided
+        if payload.guest_session_id:
+            user_id = res["user"]["id"]
+            claimed = 0
+            with db_lock:
+                for v in videos_db.values():
+                    if v.get("owner_id") == payload.guest_session_id:
+                        v["owner_id"] = user_id
+                        v["owner_type"] = "user"
+                        claimed += 1
+                if claimed > 0:
+                    save_db(videos_db)
+            res["claimed_projects"] = claimed
+        return res
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/auth/login")
+def auth_login(payload: LoginPayload):
+    try:
+        res = authenticate_user(payload.login_id, payload.password)
+        # Claim guest projects if guest_session_id provided
+        if payload.guest_session_id:
+            user_id = res["user"]["id"]
+            claimed = 0
+            with db_lock:
+                for v in videos_db.values():
+                    if v.get("owner_id") == payload.guest_session_id:
+                        v["owner_id"] = user_id
+                        v["owner_type"] = "user"
+                        claimed += 1
+                if claimed > 0:
+                    save_db(videos_db)
+            res["claimed_projects"] = claimed
+        return res
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/auth/config")
+def auth_config():
+    return {
+        "google_client_id": GOOGLE_CLIENT_ID
+    }
+
+
+@app.post("/api/auth/google")
+def auth_google(payload: GoogleAuthPayload):
+    if not payload.credential:
+        raise HTTPException(400, "Thiếu Google credential token")
+    
+    try:
+        import urllib.request
+        token_info_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={payload.credential}"
+        req = urllib.request.Request(token_info_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        google_id = data.get("sub")
+        email = data.get("email")
+        name = data.get("name") or data.get("given_name") or (email.split("@")[0] if email else "User")
+        picture = data.get("picture")
+
+        if not email or not google_id:
+            raise HTTPException(400, "Không thể lấy thông tin xác thực từ Google")
+
+        res = authenticate_google_user(google_id, email, name, picture)
+
+        # Claim guest projects if guest_session_id provided
+        if payload.guest_session_id:
+            user_id = res["user"]["id"]
+            claimed = 0
+            with db_lock:
+                for v in videos_db.values():
+                    if v.get("owner_id") == payload.guest_session_id:
+                        v["owner_id"] = user_id
+                        v["owner_type"] = "user"
+                        claimed += 1
+                if claimed > 0:
+                    save_db(videos_db)
+            res["claimed_projects"] = claimed
+        return res
+    except Exception as e:
+        print(f"[GOOGLE AUTH ERROR] {e}")
+        raise HTTPException(400, f"Đăng nhập Google thất bại: {str(e)}")
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request):
+    identity = get_current_identity(request)
+    if identity["type"] == "user":
+        return {
+            "authenticated": True,
+            "user": identity["user"],
+            "mode": "user",
+            "identity_id": identity["id"]
+        }
+    return {
+        "authenticated": False,
+        "guest_session_id": identity["id"],
+        "mode": "guest",
+        "identity_id": identity["id"]
+    }
+
+
+@app.post("/api/auth/logout")
+def auth_logout(request: Request):
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        delete_session(token)
+    return {"status": "ok"}
+
+
 @app.get("/api/status")
 def status():
     return {"status": "ok", "message": "Video Editor API running"}
 
 
 @app.post("/api/upload")
-async def upload_video(file: UploadFile = File(...)):
+async def upload_video(request: Request, file: UploadFile = File(...)):
+    identity = get_current_identity(request)
     video_id = str(uuid.uuid4())[:8]
     ext = os.path.splitext(file.filename or "video.mp4")[1] or ".mp4"
     filename = f"{video_id}{ext}"
@@ -154,6 +336,10 @@ async def upload_video(file: UploadFile = File(...)):
         "original_name": file.filename,
         "path": str(filepath),
         "duration": duration,
+        "owner_type": identity["type"],
+        "owner_id": identity["id"],
+        "created_at": time.time(),
+        "last_accessed": time.time(),
     }
     save_db(videos_db)
 
@@ -161,7 +347,8 @@ async def upload_video(file: UploadFile = File(...)):
 
 
 @app.post("/api/youtube-download")
-async def youtube_download(url: str = Form(...)):
+async def youtube_download(request: Request, url: str = Form(...)):
+    identity = get_current_identity(request)
     import yt_dlp
     video_id = str(uuid.uuid4())[:8]
     ext = ".mp4"
@@ -190,6 +377,10 @@ async def youtube_download(url: str = Form(...)):
         "path": str(filepath),
         "duration": duration,
         "youtube_url": url,
+        "owner_type": identity["type"],
+        "owner_id": identity["id"],
+        "created_at": time.time(),
+        "last_accessed": time.time(),
     }
     save_db(videos_db)
 
@@ -197,10 +388,9 @@ async def youtube_download(url: str = Form(...)):
 
 
 @app.post("/api/video/{video_id}/transcribe")
-def transcribe_video(video_id: str, background_tasks: BackgroundTasks, language: str = "en"):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def transcribe_video(video_id: str, background_tasks: BackgroundTasks, request: Request, language: str = "en"):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
 
     video_path = video.get("path")
     if not video_path or not os.path.isfile(video_path):
@@ -243,7 +433,10 @@ def transcribe_video(video_id: str, background_tasks: BackgroundTasks, language:
 
 
 @app.get("/api/video/{video_id}/transcribe-status")
-def get_transcribe_status(video_id: str, task_id: str):
+def get_transcribe_status(video_id: str, task_id: str, request: Request):
+    identity = get_current_identity(request)
+    verify_project_ownership(video_id, identity)
+
     from transcriber import _TRANSCRIBE_TASKS
     task = _TRANSCRIBE_TASKS.get(task_id)
     if not task:
@@ -290,23 +483,27 @@ def get_transcribe_status(video_id: str, task_id: str):
 
 
 @app.get("/api/videos")
-def list_videos():
-    return list(videos_db.values())
+def list_videos(request: Request):
+    identity = get_current_identity(request)
+    # Only return videos owned by this identity (or legacy unclaimed videos)
+    user_videos = [
+        v for v in videos_db.values()
+        if v.get("owner_id") == identity["id"] or (not v.get("owner_id") and identity["type"] == "user")
+    ]
+    return user_videos
 
 
 @app.get("/api/video/{video_id}")
-def get_video(video_id: str):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
-    return video
+def get_video(video_id: str, request: Request):
+    identity = get_current_identity(request)
+    return verify_project_ownership(video_id, identity)
 
 
 @app.post("/api/video/{video_id}/ref-audio")
-async def upload_ref_audio(video_id: str, file: UploadFile = File(...)):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+async def upload_ref_audio(video_id: str, request: Request, file: UploadFile = File(...)):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
+
     ext = os.path.splitext(file.filename or "ref.wav")[1] or ".wav"
     ref_filename = f"ref_{video_id}{ext}"
     ref_path = REF_AUDIO_DIR / ref_filename
@@ -321,10 +518,10 @@ async def upload_ref_audio(video_id: str, file: UploadFile = File(...)):
 
 
 @app.post("/api/video/{video_id}/subtitles")
-def save_subtitles(video_id: str, payload: SubtitlesPayload):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def save_subtitles(video_id: str, payload: SubtitlesPayload, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
+
     old_subs = {s["id"]: s for s in video.get("subtitles", [])}
     new_subs = []
     for s in payload.subtitles:
@@ -343,10 +540,9 @@ def save_subtitles(video_id: str, payload: SubtitlesPayload):
 
 
 @app.post("/api/video/{video_id}/subtitle/{sub_index}/synthesize")
-def synthesize_subtitle(video_id: str, sub_index: int):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def synthesize_subtitle(video_id: str, sub_index: int, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
     subs = video.get("subtitles", [])
     if sub_index < 0 or sub_index >= len(subs):
         raise HTTPException(404, "Subtitle not found")
@@ -367,10 +563,9 @@ def synthesize_subtitle(video_id: str, sub_index: int):
 
 
 @app.get("/api/video/{video_id}/render-status")
-def get_render_status(video_id: str):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def get_render_status(video_id: str, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
     return {
         "status": video.get("render_status", "idle"),
         "progress": video.get("render_progress", 0),
@@ -422,10 +617,9 @@ def _background_render_voice_task(video_id: str, subtitles: list, output_path: s
 
 
 @app.post("/api/video/{video_id}/render")
-def render_video(video_id: str, background_tasks: BackgroundTasks):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def render_video(video_id: str, background_tasks: BackgroundTasks, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
 
     subtitles = video.get("subtitles", [])
     if not subtitles:
@@ -451,10 +645,9 @@ def render_video(video_id: str, background_tasks: BackgroundTasks):
 
 
 @app.post("/api/video/{video_id}/render-voice-only")
-def render_voice_only(video_id: str, background_tasks: BackgroundTasks):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def render_voice_only(video_id: str, background_tasks: BackgroundTasks, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
 
     subtitles = video.get("subtitles", [])
     if not subtitles:
@@ -517,11 +710,14 @@ def download_file(filename: str, request: Request):
 
 
 @app.delete("/api/video/{video_id}")
-def delete_video(video_id: str):
-    video = videos_db.pop(video_id, None)
-    if not video:
-        raise HTTPException(404, "Video not found")
-    save_db(videos_db)
+def delete_video(video_id: str, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
+    
+    with db_lock:
+        videos_db.pop(video_id, None)
+        save_db(videos_db)
+        
     p = Path(video["path"])
     if p.exists():
         p.unlink()
@@ -918,10 +1114,9 @@ class TranslateSubPayload(BaseModel):
     target_lang: str = "vi"
 
 @app.post("/api/video/{video_id}/translate-sub")
-def translate_subtitle(video_id: str, payload: TranslateSubPayload):
-    video = videos_db.get(video_id)
-    if not video:
-        raise HTTPException(404, "Video not found")
+def translate_subtitle(video_id: str, payload: TranslateSubPayload, request: Request):
+    identity = get_current_identity(request)
+    video = verify_project_ownership(video_id, identity)
 
     settings = load_settings()
     api_url = settings.get("api_url", "http://localhost:8080")
@@ -961,9 +1156,51 @@ def translate_subtitle(video_id: str, payload: TranslateSubPayload):
         raise HTTPException(500, f"Lỗi gọi LLM API: {str(e)}")
 
 
+def _cleanup_guest_files_loop():
+    while True:
+        try:
+            time.sleep(1800)  # Check every 30 minutes
+            cutoff = time.time() - (2 * 3600)  # 2 hours inactivity
+            to_delete = []
+            with db_lock:
+                for vid, v in list(videos_db.items()):
+                    if v.get("owner_type") == "guest":
+                        last_acc = v.get("last_accessed") or v.get("created_at") or 0
+                        if last_acc < cutoff:
+                            to_delete.append(vid)
+                
+                for vid in to_delete:
+                    v = videos_db.pop(vid, None)
+                    if v:
+                        print(f"[GUEST CLEANUP] Removing expired guest project: {vid}")
+                        vpath = v.get("path")
+                        if vpath and os.path.exists(vpath):
+                            try: os.remove(vpath)
+                            except: pass
+                        out = v.get("output")
+                        if out:
+                            op = OUTPUT_DIR / out
+                            if op.exists():
+                                try: op.unlink()
+                                except: pass
+                        ref = v.get("ref_audio_path")
+                        if ref and os.path.exists(ref):
+                            try: os.remove(ref)
+                            except: pass
+                if to_delete:
+                    save_db(videos_db)
+        except Exception as e:
+            print(f"[GUEST CLEANUP ERROR] {e}")
+
+
 # Pre-load TTS model in background so UI loads immediately
 @app.on_event("startup")
 async def _preload_tts():
+    # Start guest cleanup monitor
+    clean_t = threading.Thread(target=_cleanup_guest_files_loop, daemon=True)
+    clean_t.start()
+    print("[GUEST] Auto-cleanup background monitor started (2h timeout)")
+
     # Start idle monitor right away
     t = threading.Thread(target=_tts_sleep_monitor, daemon=True)
     t.start()
@@ -984,4 +1221,16 @@ if frontend_dir.exists():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=9090)
+    cert_file = Path(__file__).parent / "cert.pem"
+    key_file = Path(__file__).parent / "key.pem"
+    ssl_kwargs = {}
+    if cert_file.exists() and key_file.exists():
+        ssl_kwargs = {
+            "ssl_certfile": str(cert_file),
+            "ssl_keyfile": str(key_file)
+        }
+        print("[SSL] Starting HTTPS server at: https://0.0.0.0:9090")
+    else:
+        print("[HTTP] Starting HTTP server at: http://0.0.0.0:9090")
+
+    uvicorn.run(app, host="0.0.0.0", port=9090, **ssl_kwargs)
