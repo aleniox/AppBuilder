@@ -1,0 +1,107 @@
+{
+  "users": {
+    "u_b89d31ea-597": {
+      "id": "u_b89d31ea-597",
+      "username": "admin_test",
+      "email": "admin@test.com",
+      "password_hash": "faa5c41e2ab16d5d5ea06698ba9e605564e05307106cc724f34ee7817d09bf61",
+      "salt": "385933357c752a69069536bc4064e8c7",
+      "created_at": 1787409356.069355,
+      "role": "user"
+    },
+    "u_37bb445b-217": {
+      "id": "u_37bb445b-217",
+      "username": "Linh_Đỗ_Văn",
+      "email": "infinity.linhdv@gmail.com",
+      "google_id": "117489124132422587328",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIM9Jt_Bc3dWRLbrBADHB-3RWXFleFIzPqvcclCG2tcdxJ6JJ5N=s96-c",
+      "created_at": 1787412064.3703778,
+      "role": "user",
+      "provider": "google"
+    },
+    "u_c9055c86-901": {
+      "id": "u_c9055c86-901",
+      "username": "Box",
+      "email": "alen.box.dl@gmail.com",
+      "google_id": "111788305536084184275",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJwcKDXfYQJhpUoX4tRnWmc7h0eUeHCGUxeR3tNT3VyLT5bVWE=s96-c",
+      "created_at": 1787418313.2820244,
+      "role": "user",
+      "provider": "google"
+    }
+  },
+  "sessions": {
+    "tok_jN8IjlStUOzPFKJB5hqQIyhF8nmz00rl4kDUwR3m5W0": {
+      "user_id": "u_b89d31ea-597",
+      "expires_at": 1790001356.0703542
+    },
+    "tok_qU5TLzF1mrzYbMzQngkrW5WoGLuUwrvK5kWPJ9Y0Ed8": {
+      "user_id": "u_b89d31ea-597",
+      "expires_at": 1790001360.642565
+    },
+    "tok_HaK2h93MzZGCe01x1Bu_FZidgZbBGnXHPnBO2HjwrGY": {
+      "user_id": "u_c9055c86-901",
+      "expires_at": 1790010313.2830243
+    },
+    "tok_XjRd3sF9fMbXRfMk1y3C9kvxb_kbLJLdsH-Lt57ZoXY": {
+      "user_id": "u_c9055c86-901",
+      "expires_at": 1790010326.5114818
+    },
+    "tok_1XuDPP37OGpNzF9umPMwCGrd0rJw3I9o9XRbgsdT1j0": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790010377.6709585
+    },
+    "tok_2_8DLtxATGZA00H2EZ2IOd4e5LoumSWonzzgtYo1Kgs": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790010536.1210973
+    },
+    "tok_7infzALGwyEJQPmdcIsOGUQ3AIaf7lJx43tmIIpIatQ": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790010550.7348707
+    },
+    "tok_NtFcHtnJ427c67XM-52koD6yDJUwuKsDxTgEZbPkBAs": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790010613.617633
+    },
+    "tok_N2Xp-mS0GS2nfry_6JEEuhCMOBrI3RPtqXGtPWYDEkc": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790010714.5196147
+    },
+    "tok_UOq77-c08jawD_31SkUXwC5rpMNbQMFNgnuBv2bbsJo": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011289.270889
+    },
+    "tok_frMNX99ADo7XaxIRaN7wVCbu3ztfOOgAvQKbLW4cX4g": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011296.4720535
+    },
+    "tok_Y1m0WdWCT4KGGVQgZzNHdJBncH5gMcAHrVmPInO9eoY": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011406.0666583
+    },
+    "tok_ETrpdIp0ZJehHdqotNj_EWC6QQGuiVzxpT-6R2O9m40": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011656.763701
+    },
+    "tok_EWE0fqTgGxyJddfFxy5HNRq50RrUEeEfxEKAgenSiVY": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011702.0326586
+    },
+    "tok_C0shKqGp9OI70hHbOe-V7qdqlqFJbcjm3M6JIvZuz9w": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011722.0028405
+    },
+    "tok_Vq1QSyxhtF0qe_HIkRmNtIlvm9qMXrMB12PjEgoyTGk": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011745.0846233
+    },
+    "tok__E5zYJXYl92w9P4T3_yv7mX38SjiaLXLf2RYEGPud_0": {
+      "user_id": "u_37bb445b-217",
+      "expires_at": 1790011859.0357366
+    },
+    "tok_h2afOkxfWaylsKVuGxX_C7LERBqsuYnlVb2a6yy6S4s": {
+      "user_id": "u_c9055c86-901",
+      "expires_at": 1790012163.8400905
+    }
+  }
+}

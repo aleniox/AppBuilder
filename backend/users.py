@@ -8,7 +8,9 @@ import threading
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-USERS_DB_FILE = Path(__file__).parent / "users.json"
+STORAGE_DIR = Path(__file__).parent / "storage"
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+USERS_DB_FILE = STORAGE_DIR / "users.json"
 _users_lock = threading.Lock()
 
 def _load_users_db() -> Dict[str, Any]:

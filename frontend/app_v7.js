@@ -27,7 +27,8 @@ async function apiFetch(endpoint, options = {}) {
 
   const resp = await fetch(url, options);
   if (resp.status === 401 || resp.status === 403) {
-    if (authToken) {
+    const isAuthRoute = endpoint.includes('/api/auth/login') || endpoint.includes('/api/auth/register') || endpoint.includes('/api/auth/google');
+    if (authToken && !isAuthRoute) {
       console.warn('Phiên đăng nhập hết hạn hoặc không hợp lệ. Chuyển sang chế độ Khách.');
       authToken = null;
       currentUser = null;
@@ -78,6 +79,8 @@ const linkBannerRegister = document.getElementById('link-banner-register');
 
 // Auth Modal DOM refs
 const authModal = document.getElementById('auth-modal');
+const authModalTitle = document.getElementById('auth-modal-title');
+const authModalSubtitle = document.getElementById('auth-modal-subtitle');
 const tabAuthLogin = document.getElementById('tab-auth-login');
 const tabAuthRegister = document.getElementById('tab-auth-register');
 const btnCloseAuth = document.getElementById('btn-close-auth');
@@ -93,8 +96,12 @@ const regErrorBox = document.getElementById('reg-error');
 const linkSwitchToReg = document.getElementById('link-switch-to-reg');
 const linkSwitchToLogin = document.getElementById('link-switch-to-login');
 const googleAuthErrorBox = document.getElementById('google-auth-error');
+const btnCustomGoogleLogin = document.getElementById('btn-custom-google-login');
+const btnGoogleText = document.getElementById('btn-google-text');
 
 let googleClientId = "788558575113-7rlnllf0etgn3f9u4kooa8he3t3vl7ur.apps.googleusercontent.com";
+let googleTokenClient = null;
+let googleAuthInitialized = false;
 
 async function fetchAuthConfig() {
   try {
@@ -110,43 +117,74 @@ async function fetchAuthConfig() {
 }
 
 function initGoogleAuth() {
-  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+  if (!window.google || !window.google.accounts) {
     setTimeout(initGoogleAuth, 300);
     return;
   }
-  if (!googleClientId) return;
+  if (!googleClientId || googleAuthInitialized) return;
 
   try {
-    window.google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCredentialResponse,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-
-    const btnSlot = document.getElementById('google-btn-slot');
-    if (btnSlot) {
-      btnSlot.innerHTML = '';
-      window.google.accounts.id.renderButton(
-        btnSlot,
-        {
-          theme: 'filled_black',
-          size: 'large',
-          type: 'standard',
-          shape: 'pill',
-          text: 'continue_with',
-          logo_alignment: 'left',
-          width: 300
-        }
-      );
+    // 1. Initialize Token Client for custom popup button
+    if (window.google.accounts.oauth2) {
+      googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: 'email profile openid',
+        callback: async (response) => {
+          if (response && response.access_token) {
+            await handleGoogleLoginWithToken(response.access_token);
+          } else if (response && response.error) {
+            console.warn("Google OAuth response error:", response.error);
+          }
+        },
+      });
     }
+
+    // 2. Initialize ID Client for credential callback / fallback
+    if (window.google.accounts.id) {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+    }
+
+    googleAuthInitialized = true;
   } catch (err) {
     console.warn("Google Auth Init Warning:", err);
   }
 }
 
+function handleCustomGoogleSignIn() {
+  if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
+
+  if (googleTokenClient) {
+    googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+  } else if (window.google && window.google.accounts && window.google.accounts.oauth2 && googleClientId) {
+    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: googleClientId,
+      scope: 'email profile openid',
+      callback: async (response) => {
+        if (response && response.access_token) {
+          await handleGoogleLoginWithToken(response.access_token);
+        }
+      },
+    });
+    googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+  } else if (window.google && window.google.accounts && window.google.accounts.id) {
+    window.google.accounts.id.prompt();
+  } else {
+    alert("Dịch vụ Google đang khởi động, vui lòng thử lại sau vài giây.");
+  }
+}
+
 async function handleGoogleCredentialResponse(response) {
-  const credential = response.credential;
+  if (response && response.credential) {
+    await handleGoogleLoginWithToken(response.credential);
+  }
+}
+
+async function handleGoogleLoginWithToken(credential) {
   if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
 
   try {
@@ -159,9 +197,17 @@ async function handleGoogleCredentialResponse(response) {
       })
     });
 
-    const data = await res.json();
+    let data;
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Phản hồi máy chủ (${res.status}): ${text.slice(0, 100)}`);
+    }
+
     if (!res.ok) {
-      throw new Error(data.detail || "Đăng nhập Google thất bại");
+      throw new Error(data.detail || 'Xác thực Google thất bại');
     }
 
     authToken = data.token;
@@ -173,6 +219,7 @@ async function handleGoogleCredentialResponse(response) {
     updateAuthUI();
     await loadVideoList();
   } catch (err) {
+    console.error("Google login error:", err);
     if (googleAuthErrorBox) {
       googleAuthErrorBox.textContent = err.message;
       googleAuthErrorBox.style.display = 'block';
@@ -183,24 +230,30 @@ async function handleGoogleCredentialResponse(response) {
 }
 
 function updateAuthUI() {
+  const userAuthArea = document.getElementById('user-auth-area');
+  const userProfileArea = document.getElementById('user-profile-area');
+  const userDisplayName = document.getElementById('user-display-name');
+  const userAvatarInitial = document.getElementById('user-avatar-initial');
+  const guestWarningBanner = document.getElementById('guest-warning-banner');
+
   if (currentUser && authToken) {
-    if (userAuthArea) userAuthArea.style.display = 'none';
-    if (userProfileArea) userProfileArea.style.display = 'flex';
-    if (userDisplayName) userDisplayName.textContent = currentUser.username || 'User';
+    if (userAuthArea) userAuthArea.style.setProperty('display', 'none', 'important');
+    if (userProfileArea) userProfileArea.style.setProperty('display', 'flex', 'important');
+    if (userDisplayName) userDisplayName.textContent = currentUser.username || currentUser.email || 'User';
     if (userAvatarInitial) {
       if (currentUser.avatar) {
-        userAvatarInitial.innerHTML = `<img src="${currentUser.avatar}" alt="Avatar" class="user-avatar-img" referrerpolicy="no-referrer">`;
+        userAvatarInitial.innerHTML = `<img src="${currentUser.avatar}" alt="Avatar" class="user-avatar-img" referrerpolicy="no-referrer" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
         userAvatarInitial.style.background = 'transparent';
       } else {
         userAvatarInitial.textContent = (currentUser.username || 'U')[0].toUpperCase();
         userAvatarInitial.style.background = '';
       }
     }
-    if (guestWarningBanner) guestWarningBanner.style.display = 'none';
+    if (guestWarningBanner) guestWarningBanner.style.setProperty('display', 'none', 'important');
   } else {
-    if (userAuthArea) userAuthArea.style.display = 'flex';
-    if (userProfileArea) userProfileArea.style.display = 'none';
-    if (guestWarningBanner) guestWarningBanner.style.display = 'flex';
+    if (userAuthArea) userAuthArea.style.setProperty('display', 'flex', 'important');
+    if (userProfileArea) userProfileArea.style.setProperty('display', 'none', 'important');
+    if (guestWarningBanner) guestWarningBanner.style.setProperty('display', 'flex', 'important');
   }
 }
 
@@ -212,19 +265,42 @@ function openAuthModal(mode = 'login') {
   if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
 
   initGoogleAuth();
+  switchAuthTab(mode);
+}
+
+function switchAuthTab(mode) {
+  if (loginErrorBox) loginErrorBox.style.display = 'none';
+  if (regErrorBox) regErrorBox.style.display = 'none';
+  if (googleAuthErrorBox) googleAuthErrorBox.style.display = 'none';
 
   if (mode === 'register') {
+    if (authModalTitle) authModalTitle.textContent = 'Tạo tài khoản mới';
+    if (authModalSubtitle) authModalSubtitle.textContent = 'Đăng ký để lưu trữ video và quản lý dự án vĩnh viễn';
+    if (btnGoogleText) btnGoogleText.textContent = 'Đăng ký bằng Google';
     if (tabAuthRegister) tabAuthRegister.classList.add('active');
     if (tabAuthLogin) tabAuthLogin.classList.remove('active');
-    if (formRegister) formRegister.style.display = 'block';
     if (formLogin) formLogin.style.display = 'none';
-    if (regUsernameInput) regUsernameInput.focus();
+    if (formRegister) {
+      formRegister.style.display = 'block';
+      formRegister.classList.remove('auth-form');
+      void formRegister.offsetWidth; // Trigger reflow for CSS animation
+      formRegister.classList.add('auth-form');
+    }
+    if (regUsernameInput) setTimeout(() => regUsernameInput.focus(), 50);
   } else {
+    if (authModalTitle) authModalTitle.textContent = 'Chào mừng trở lại!';
+    if (authModalSubtitle) authModalSubtitle.textContent = 'Đăng nhập để lưu trữ video và quản lý dự án của bạn';
+    if (btnGoogleText) btnGoogleText.textContent = 'Đăng nhập bằng Google';
     if (tabAuthLogin) tabAuthLogin.classList.add('active');
     if (tabAuthRegister) tabAuthRegister.classList.remove('active');
-    if (formLogin) formLogin.style.display = 'block';
     if (formRegister) formRegister.style.display = 'none';
-    if (loginUsernameInput) loginUsernameInput.focus();
+    if (formLogin) {
+      formLogin.style.display = 'block';
+      formLogin.classList.remove('auth-form');
+      void formLogin.offsetWidth; // Trigger reflow for CSS animation
+      formLogin.classList.add('auth-form');
+    }
+    if (loginUsernameInput) setTimeout(() => loginUsernameInput.focus(), 50);
   }
 }
 
@@ -239,12 +315,21 @@ async function handleLoginSubmit(e) {
   const password = loginPasswordInput.value;
 
   try {
-    const res = await fetch(`${API}/api/auth/login`, {
+    const res = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ login_id, password, guest_session_id: guestSessionId })
     });
-    const data = await res.json();
+
+    let data;
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Phản hồi máy chủ (${res.status}): ${text.slice(0, 100)}`);
+    }
+
     if (!res.ok) {
       throw new Error(data.detail || 'Đăng nhập thất bại');
     }
@@ -273,12 +358,21 @@ async function handleRegisterSubmit(e) {
   const password = regPasswordInput.value;
 
   try {
-    const res = await fetch(`${API}/api/auth/register`, {
+    const res = await apiFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password, guest_session_id: guestSessionId })
     });
-    const data = await res.json();
+
+    let data;
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Phản hồi máy chủ (${res.status}): ${text.slice(0, 100)}`);
+    }
+
     if (!res.ok) {
       throw new Error(data.detail || 'Đăng ký thất bại');
     }
@@ -321,14 +415,15 @@ async function handleLogout() {
 }
 
 // Auth Event Listeners
+if (btnCustomGoogleLogin) btnCustomGoogleLogin.addEventListener('click', handleCustomGoogleSignIn);
 if (btnOpenLogin) btnOpenLogin.addEventListener('click', () => openAuthModal('login'));
 if (btnOpenRegister) btnOpenRegister.addEventListener('click', () => openAuthModal('register'));
 if (linkBannerLogin) linkBannerLogin.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('login'); });
 if (linkBannerRegister) linkBannerRegister.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('register'); });
-if (linkSwitchToReg) linkSwitchToReg.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('register'); });
-if (linkSwitchToLogin) linkSwitchToLogin.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('login'); });
-if (tabAuthLogin) tabAuthLogin.addEventListener('click', () => openAuthModal('login'));
-if (tabAuthRegister) tabAuthRegister.addEventListener('click', () => openAuthModal('register'));
+if (linkSwitchToReg) linkSwitchToReg.addEventListener('click', (e) => { e.preventDefault(); switchAuthTab('register'); });
+if (linkSwitchToLogin) linkSwitchToLogin.addEventListener('click', (e) => { e.preventDefault(); switchAuthTab('login'); });
+if (tabAuthLogin) tabAuthLogin.addEventListener('click', () => switchAuthTab('login'));
+if (tabAuthRegister) tabAuthRegister.addEventListener('click', () => switchAuthTab('register'));
 if (btnCloseAuth) btnCloseAuth.addEventListener('click', closeAuthModal);
 if (authModal) {
   authModal.addEventListener('click', (e) => {
@@ -3520,4 +3615,17 @@ if (videoPlayer) {
     if (iconPause) iconPause.style.display = 'none';
     if (textPlayPause) textPlayPause.textContent = 'Phát';
   });
+}
+
+// --- Initial App Boot & Auth Sync ---
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    updateAuthUI();
+    fetchAuthConfig();
+    loadVideoList();
+  });
+} else {
+  updateAuthUI();
+  fetchAuthConfig();
+  loadVideoList();
 }

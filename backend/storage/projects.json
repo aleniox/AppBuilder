@@ -2338,5 +2338,63 @@
     ],
     "voice_enabled": true,
     "voice_lang": "vi"
+  },
+  "028f3204": {
+    "id": "028f3204",
+    "filename": "028f3204.mp4",
+    "original_name": "Bác Hồ đọc Tuyên ngôn Độc lập ngày 2-9-1945.mp4",
+    "path": "uploads\\028f3204.mp4",
+    "duration": 41.8,
+    "owner_type": "guest",
+    "owner_id": "guest_2oq5h49amt4izxbp",
+    "created_at": 1787412273.8526263,
+    "last_accessed": 1787412337.2351537,
+    "subtitles": [
+      {
+        "id": "sub_1",
+        "start": 0.31,
+        "end": 9.637,
+        "text": "My fellow countrymen, all of us were born with the right to be equal, to create for them rights that no one can violate.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_2",
+        "start": 9.817,
+        "end": 16.962,
+        "text": "Among those rights, there is the right to live, the right to freedom, and the right to pray for happiness.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_3",
+        "start": 17.022,
+        "end": 26.109,
+        "text": "Vietnam has the right to freedom and independence, and the challenge has become a country of freedom and independence.",
+        "voice": "en",
+        "audio_path": null
+      },
+      {
+        "id": "sub_4",
+        "start": 27.142,
+        "end": 36.152,
+        "text": "The entire Vietnamese nation is determined to give all its spirit and strength to save freedom and independence.",
+        "voice": "en",
+        "audio_path": null
+      }
+    ],
+    "voice_enabled": true,
+    "voice_lang": "vi"
+  },
+  "b4f5b7dc": {
+    "id": "b4f5b7dc",
+    "filename": "b4f5b7dc.mp4",
+    "original_name": "Bác Hồ đọc Tuyên ngôn Độc lập ngày 2-9-1945.mp4",
+    "path": "F:\\WebEdit\\video-editor\\backend\\storage\\uploads\\b4f5b7dc.mp4",
+    "duration": 41.8,
+    "owner_type": "guest",
+    "owner_id": "guest_a5x36i75mt4kkwgb",
+    "created_at": 1787418182.6028275,
+    "last_accessed": 1787418182.6028275
   }
 }

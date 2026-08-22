@@ -3,6 +3,7 @@ import sys
 import time
 import uuid
 import json
+import base64
 import shutil
 import asyncio
 from pathlib import Path
@@ -52,12 +53,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-UPLOAD_DIR = Path("uploads")
-OUTPUT_DIR = Path("output")
-REF_AUDIO_DIR = Path("ref_audio")
-UPLOAD_DIR.mkdir(exist_ok=True)
-OUTPUT_DIR.mkdir(exist_ok=True)
-REF_AUDIO_DIR.mkdir(exist_ok=True)
+STORAGE_DIR = Path(__file__).parent / "storage"
+UPLOAD_DIR = STORAGE_DIR / "uploads"
+OUTPUT_DIR = STORAGE_DIR / "output"
+REF_AUDIO_DIR = STORAGE_DIR / "ref_audio"
+SSL_DIR = STORAGE_DIR / "ssl"
+
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+REF_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+SSL_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Video Editor API")
 
@@ -71,7 +77,7 @@ app.add_middleware(
 
 # File-based database persistence
 import threading
-DB_FILE = Path("projects.json")
+DB_FILE = STORAGE_DIR / "projects.json"
 db_lock = threading.Lock()
 
 def load_db():
@@ -145,6 +151,21 @@ class GoogleAuthPayload(BaseModel):
 
 
 GOOGLE_CLIENT_ID = "788558575113-7rlnllf0etgn3f9u4kooa8he3t3vl7ur.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = ""
+
+# Auto load from client_secret_*.json
+_secret_files = list(Path(__file__).parent.parent.glob("client_secret_*.json")) + list(Path(__file__).parent.glob("client_secret_*.json"))
+if _secret_files:
+    try:
+        with open(_secret_files[0], "r", encoding="utf-8") as _f:
+            _cfg = json.load(_f)
+            _web = _cfg.get("web") or _cfg.get("installed") or {}
+            if "client_id" in _web:
+                GOOGLE_CLIENT_ID = _web["client_id"]
+            if "client_secret" in _web:
+                GOOGLE_CLIENT_SECRET = _web["client_secret"]
+    except Exception as _e:
+        print(f"[GOOGLE CONFIG ERROR] {_e}")
 
 
 def get_current_identity(request: Request) -> dict:
@@ -237,22 +258,53 @@ def auth_config():
     }
 
 
+def _decode_google_jwt(token: str) -> dict:
+    parts = token.strip().split(".")
+    if len(parts) != 3:
+        raise ValueError("Định dạng Google Token không hợp lệ")
+    payload_b64 = parts[1]
+    payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+    payload_bytes = base64.urlsafe_b64decode(payload_b64.encode("utf-8"))
+    data = json.loads(payload_bytes.decode("utf-8"))
+    
+    iss = data.get("iss", "")
+    if "accounts.google.com" not in iss:
+        raise ValueError(f"Google issuer không hợp lệ: {iss}")
+    if data.get("exp", 0) and data.get("exp") < time.time() - 300:
+        raise ValueError("Google token đã hết hạn")
+    return data
+
+
 @app.post("/api/auth/google")
 def auth_google(payload: GoogleAuthPayload):
     if not payload.credential:
         raise HTTPException(400, "Thiếu Google credential token")
     
     try:
-        import urllib.request
-        token_info_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={payload.credential}"
-        req = urllib.request.Request(token_info_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        data = None
+        # 1. If it's a JWT ID Token (3 parts separated by dots), decode locally instantly (0.1ms)
+        if "." in payload.credential and len(payload.credential.split(".")) == 3:
+            try:
+                data = _decode_google_jwt(payload.credential)
+            except Exception as e:
+                print(f"[JWT DECODE WARNING] {e}")
+        
+        # 2. If it's an OAuth2 Access Token, fetch from Google userinfo API with short timeout
+        if not data:
+            import httpx
+            userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+            with httpx.Client(timeout=5.0) as client:
+                resp = client.get(userinfo_url, headers={"Authorization": f"Bearer {payload.credential}"})
+                if resp.status_code == 200:
+                    data = resp.json()
+        
+        if not data:
+            raise ValueError("Không thể giải mã thông tin tài khoản Google")
 
-        google_id = data.get("sub")
+        google_id = data.get("sub") or data.get("id")
         email = data.get("email")
         name = data.get("name") or data.get("given_name") or (email.split("@")[0] if email else "User")
-        picture = data.get("picture")
+        picture = data.get("picture") or data.get("avatar")
 
         if not email or not google_id:
             raise HTTPException(400, "Không thể lấy thông tin xác thực từ Google")
@@ -272,10 +324,14 @@ def auth_google(payload: GoogleAuthPayload):
                 if claimed > 0:
                     save_db(videos_db)
             res["claimed_projects"] = claimed
+        
+        print(f"[GOOGLE AUTH SUCCESS] User logged in: {email}")
         return res
-    except Exception as e:
-        print(f"[GOOGLE AUTH ERROR] {e}")
+    except ValueError as e:
         raise HTTPException(400, f"Đăng nhập Google thất bại: {str(e)}")
+    except Exception as e:
+        raise HTTPException(400, f"Đăng nhập Google thất bại: {str(e)}")
+
 
 
 @app.get("/api/auth/me")
@@ -1078,7 +1134,7 @@ def _render_video_with_subtitles_and_voice(
 
 
 # ===== Settings & Translation =====
-SETTINGS_FILE = Path("settings.json")
+SETTINGS_FILE = STORAGE_DIR / "settings.json"
 
 def load_settings():
     if SETTINGS_FILE.exists():
@@ -1205,9 +1261,8 @@ async def _preload_tts():
     t = threading.Thread(target=_tts_sleep_monitor, daemon=True)
     t.start()
     print(f"[TTS] Idle monitor started (timeout={_TTS_IDLE_TIMEOUT}s)")
-    # Load model in background, doesn't block server startup
-    thread = threading.Thread(target=_init_tts_engine, daemon=True)
-    thread.start()
+    # TTS model will load on demand when needed
+    print("[TTS] Server ready. TTS engine will load on demand.")
 
 @app.get("/api/tts/status")
 def tts_model_status():
@@ -1221,8 +1276,12 @@ if frontend_dir.exists():
 
 if __name__ == "__main__":
     import uvicorn
-    cert_file = Path(__file__).parent / "cert.pem"
-    key_file = Path(__file__).parent / "key.pem"
+    cert_file = SSL_DIR / "cert.pem"
+    key_file = SSL_DIR / "key.pem"
+    if not cert_file.exists() or not key_file.exists():
+        # Fallback check backend root
+        cert_file = Path(__file__).parent / "cert.pem"
+        key_file = Path(__file__).parent / "key.pem"
     ssl_kwargs = {}
     if cert_file.exists() and key_file.exists():
         ssl_kwargs = {
